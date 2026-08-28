@@ -19,6 +19,7 @@ export interface RouteStep {
   distance: number;
   duration: number;
   name: string;
+  ref?: string;
   instruction: string;
   maneuverType: ManeuverType;
   modifier?: string;

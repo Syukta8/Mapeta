@@ -35,13 +35,15 @@ export function processMultiRoutes(
           for (const step of leg.steps) {
             const maneuver = step.maneuver || {};
             const type = mapOSRMType(maneuver.type, maneuver.modifier);
-            const name = step.name || 'Unnamed Road';
+            const name = step.name || (step.ref ? `Lebuhraya ${step.ref}` : 'Unnamed Road');
+            const ref = step.ref || undefined;
             const instruction = generateInstruction(type, maneuver.modifier, name);
 
             steps.push({
               distance: step.distance || 0,
               duration: step.duration || 0,
               name,
+              ref,
               instruction,
               maneuverType: type,
               modifier: maneuver.modifier,

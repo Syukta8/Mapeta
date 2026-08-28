@@ -6,7 +6,7 @@ import type { TollBreakdownItem } from '../types/navigation';
 interface ExpresswayDef {
   name: string;
   code: string;
-  keywords: string[];
+  patterns: RegExp[];
   type: 'open' | 'closed';
   openRate?: number; // Flat fee per gantry (RM)
   closedRatePerKm?: number; // Rate per km (RM/km)
@@ -17,32 +17,47 @@ const LLM_EXPRESSWAYS: ExpresswayDef[] = [
   // 1. Closed Toll System (Distance-based)
   {
     name: 'Lebuhraya Utara-Selatan (PLUS)',
-    code: 'E1/E2',
-    keywords: ['plus', 'utara-selatan', 'north-south expressway', 'lebuhraya utara selatan', 'e1', 'e2', 'ah2'],
+    code: 'PLUS (E1/E2)',
+    patterns: [/\be1\b/i, /\be2\b/i, /plus/i, /utara[-–\s]selatan/i, /north[-–\s]south/i, /\bah2\b/i],
     type: 'closed',
-    closedRatePerKm: 0.136, // LLM standard ~13.6 sen/km
+    closedRatePerKm: 0.136, // ~13.6 sen/km
     minFee: 1.40,
   },
   {
+    name: 'Lebuhraya Hubungan Tengah (ELITE)',
+    code: 'ELITE (E6)',
+    patterns: [/\be6\b/i, /elite/i, /hubungan\s*tengah/i],
+    type: 'closed',
+    closedRatePerKm: 0.142,
+    minFee: 1.40,
+  },
+  {
+    name: 'Lebuhraya Seremban-Port Dickson (SPDH)',
+    code: 'SPDH (E29)',
+    patterns: [/\be29\b/i, /spdh/i, /seremban[-–\s]port\s*dickson/i],
+    type: 'open',
+    openRate: 3.20, // Total Mambau (RM 1.60) + Lukut (RM 1.60)
+  },
+  {
     name: 'Lebuhraya Pantai Timur (LPT 1/2)',
-    code: 'E8',
-    keywords: ['lpt', 'pantai timur', 'east coast expressway', 'e8'],
+    code: 'LPT (E8)',
+    patterns: [/\be8\b/i, /lpt/i, /pantai\s*timur/i, /east\s*coast/i],
     type: 'closed',
     closedRatePerKm: 0.125,
     minFee: 2.50,
   },
   {
     name: 'Lebuhraya Pesisiran Pantai Barat (WCE)',
-    code: 'E32',
-    keywords: ['wce', 'pesisiran pantai barat', 'west coast expressway', 'e32'],
+    code: 'WCE (E32)',
+    patterns: [/\be32\b/i, /wce/i, /pesisiran\s*pantai\s*barat/i, /west\s*coast/i],
     type: 'closed',
     closedRatePerKm: 0.139,
     minFee: 1.60,
   },
   {
     name: 'Lebuhraya Lembah Klang Selatan (SKVE)',
-    code: 'E26',
-    keywords: ['skve', 'south klang valley', 'lembah klang selatan', 'e26'],
+    code: 'SKVE (E26)',
+    patterns: [/\be26\b/i, /skve/i, /lembah\s*klang\s*selatan/i, /south\s*klang\s*valley/i],
     type: 'closed',
     closedRatePerKm: 0.145,
     minFee: 1.30,
@@ -51,106 +66,106 @@ const LLM_EXPRESSWAYS: ExpresswayDef[] = [
   // 2. Open Toll System (Fixed Plaza / Gantry Rates)
   {
     name: 'Maju Expressway (MEX)',
-    code: 'E20',
-    keywords: ['mex', 'maju expressway', 'e20'],
+    code: 'MEX (E20)',
+    patterns: [/\be20\b/i, /mex/i, /maju\s*expressway/i],
     type: 'open',
     openRate: 3.50,
   },
   {
     name: 'Lebuhraya Damansara-Puchong (LDP)',
-    code: 'E11',
-    keywords: ['ldp', 'damansara-puchong', 'litrak', 'e11'],
+    code: 'LDP (E11)',
+    patterns: [/\be11\b/i, /ldp/i, /damansara[-–\s]puchong/i, /litrak/i],
     type: 'open',
     openRate: 2.10,
   },
   {
     name: 'Duta-Ulu Kelang Expressway (DUKE)',
-    code: 'E33',
-    keywords: ['duke', 'duta-ulu kelang', 'kesturi', 'e33'],
+    code: 'DUKE (E33)',
+    patterns: [/\be33\b/i, /duke/i, /duta[-–\s]ulu\s*kelang/i, /kesturi/i],
     type: 'open',
     openRate: 2.50,
   },
   {
     name: 'Lebuhraya Shah Alam (KESAS)',
-    code: 'E5',
-    keywords: ['kesas', 'shah alam expressway', 'e5'],
+    code: 'KESAS (E5)',
+    patterns: [/\be5\b/i, /kesas/i, /shah\s*alam\s*expressway/i],
     type: 'open',
     openRate: 2.00,
   },
   {
     name: 'New Pantai Expressway (NPE)',
-    code: 'E10',
-    keywords: ['npe', 'new pantai expressway', 'e10'],
+    code: 'NPE (E10)',
+    patterns: [/\be10\b/i, /npe/i, /new\s*pantai/i, /pantai\s*baru/i],
     type: 'open',
     openRate: 2.30,
   },
   {
     name: 'Sistem Penguraian Trafik KL Barat (SPRINT)',
-    code: 'E23',
-    keywords: ['sprint', 'kerinchi', 'damansara link', 'penchala link', 'e23'],
+    code: 'SPRINT (E23)',
+    patterns: [/\be23\b/i, /sprint/i, /kerinchi/i, /damansara\s*link/i, /penchala\s*link/i],
     type: 'open',
     openRate: 2.50,
   },
   {
     name: 'Kajang SILK Highway',
-    code: 'E18',
-    keywords: ['silk', 'kajang silk', 'e18'],
+    code: 'SILK (E18)',
+    patterns: [/\be18\b/i, /silk/i, /kajang\s*silk/i],
     type: 'open',
     openRate: 1.80,
   },
   {
     name: 'Guthrie Corridor Expressway (GCE)',
-    code: 'E35',
-    keywords: ['gce', 'guthrie', 'e35'],
+    code: 'GCE (E35)',
+    patterns: [/\be35\b/i, /gce/i, /guthrie/i],
     type: 'open',
     openRate: 1.90,
   },
   {
     name: 'KL-Kuala Selangor Expressway (LATAR)',
-    code: 'E25',
-    keywords: ['latar', 'kuala selangor', 'e25'],
+    code: 'LATAR (E25)',
+    patterns: [/\be25\b/i, /latar/i, /kuala\s*selangor/i],
     type: 'open',
     openRate: 2.50,
   },
   {
     name: 'Terowong SMART',
-    code: 'E38',
-    keywords: ['smart', 'smart tunnel', 'terowong smart', 'e38'],
+    code: 'SMART (E38)',
+    patterns: [/\be38\b/i, /smart/i, /terowong\s*smart/i],
     type: 'open',
     openRate: 3.00,
   },
   {
-    name: 'Ampang-Kuala Lumpur Elevated Highway (AKLEH)',
-    code: 'E12',
-    keywords: ['akleh', 'ampang-kuala lumpur', 'e12'],
+    name: 'Ampang-KL Elevated Highway (AKLEH)',
+    code: 'AKLEH (E12)',
+    patterns: [/\be12\b/i, /akleh/i, /ampang[-–\s]kuala\s*lumpur/i],
     type: 'open',
     openRate: 2.50,
   },
   {
     name: 'Lebuhraya Bertingkat Sungai Besi-Ulu Kelang (SUKE)',
-    code: 'E19',
-    keywords: ['suke', 'sungai besi-ulu kelang', 'e19'],
+    code: 'SUKE (E19)',
+    patterns: [/\be19\b/i, /suke/i, /sungai\s*besi[-–\s]ulu\s*kelang/i],
     type: 'open',
     openRate: 2.30,
   },
   {
     name: 'Damansara-Shah Alam Elevated Expressway (DASH)',
-    code: 'E31',
-    keywords: ['dash', 'damansara-shah alam', 'e31'],
+    code: 'DASH (E31)',
+    patterns: [/\be31\b/i, /dash/i, /damansara[-–\s]shah\s*alam/i],
     type: 'open',
     openRate: 2.30,
   },
   {
     name: 'Jambatan Pulau Pinang',
-    code: 'E36',
-    keywords: ['jambatan pulau pinang', 'penang bridge', 'e36'],
+    code: 'Penang Bridge (E36)',
+    patterns: [/\be36\b/i, /jambatan\s*pulau\s*pinang/i, /penang\s*bridge/i],
     type: 'open',
     openRate: 5.60,
   },
   {
     name: 'Lebuhraya KL-Karak',
-    code: 'E8 (Karak)',
-    keywords: ['karak', 'kl-karak', 'plaza tol gombak', 'bentong'],
+    code: 'KL-Karak (E8)',
+    patterns: [/karak/i, /kl[-–\s]karak/i, /plaza\s*tol\s*gombak/i, /bentong/i],
     type: 'open',
     openRate: 6.00,
   },
@@ -159,7 +174,7 @@ const LLM_EXPRESSWAYS: ExpresswayDef[] = [
 /**
  * Calculates LLM Toll Fares and Itemized Expressway Breakdown from Route Steps
  */
-export function calculateLLMTolls(steps: { name: string; distance: number }[]): {
+export function calculateLLMTolls(steps: { name?: string; ref?: string; distance: number }[]): {
   hasTolls: boolean;
   totalFare: number;
   formattedTotal: string;
@@ -168,11 +183,15 @@ export function calculateLLMTolls(steps: { name: string; distance: number }[]): 
   const breakdownMap = new Map<string, TollBreakdownItem>();
 
   steps.forEach((step) => {
-    const roadName = (step.name || '').toLowerCase();
-    if (!roadName || roadName === 'unnamed road') return;
+    // Normalize string: convert Unicode en-dash, em-dash to hyphen
+    const nameStr = (step.name || '').replace(/[\u2010-\u2015]/g, '-').toLowerCase();
+    const refStr = (step.ref || '').replace(/[\u2010-\u2015]/g, '-').toLowerCase();
+    const combined = `${nameStr} ${refStr}`.trim();
+
+    if (!combined) return;
 
     for (const exp of LLM_EXPRESSWAYS) {
-      const isMatch = exp.keywords.some((k) => roadName.includes(k));
+      const isMatch = exp.patterns.some((regex) => regex.test(combined));
       if (isMatch) {
         const distKm = step.distance / 1000;
         const existing = breakdownMap.get(exp.code);
@@ -198,7 +217,7 @@ export function calculateLLMTolls(steps: { name: string; distance: number }[]): 
             type: exp.type,
           });
         }
-        break; // Match first specific expressway
+        break; // Matched primary expressway
       }
     }
   });
