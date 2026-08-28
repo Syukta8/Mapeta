@@ -12,7 +12,7 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 ## Decisions
 2026-08-28 — Hybrid Contraction Hierarchies (CH) + Dynamic Incident Rerouting — Chosen for <5ms query response times paired with real-time hazard avoidance.
 2026-08-28 — Permissive Open Source Stack (MIT, BSD-3, Apache-2.0, ODbL) — Strict corporate property compliance, no proprietary lock-in.
-2026-08-28 — Tailscale / WireGuard Remote Mesh Access — Zero-config, encrypted private access from Android phones on cellular data without opening router ports.
+2026-08-28 — Cloudflare Quick Tunnel for Mobile Access — Bypasses corporate network firewalls without needing VPN client setup on phones.
 2026-08-28 — Mandatory Pre-Commit Build Gate — Every stage must pass npm run build and tsc --noEmit before git commit.
 
 ## Gotchas
@@ -26,3 +26,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Added Waze-style live incident reporting drawer, interactive badges, and WebSocket sync (Commit 369e03e).
 2026-08-28 — Added Android PWA manifest, Screen Wake-Lock API, SearchBar autocomplete, security audit, and layman README.md (Commit 47e1eac).
 2026-08-28 — Configured Git remote origin: https://github.com/Syukta8/Mapeta.git.
+2026-08-28 — Removed Tailscale and configured Cloudflare Tunnel.

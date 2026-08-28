@@ -39,15 +39,16 @@ npm run dev
 
 ## 📱 How to Use on Your Phone Anywhere on the Road
 
-You can access your Mapeta server from your phone outside your house or office on 4G/5G cellular data using a free private mesh network like **[Tailscale](https://tailscale.com/)**:
+You can access Mapeta from your phone anywhere on 4G/5G cellular data using the built-in, free **Cloudflare Tunnel** (bypasses any router or corporate firewalls with zero setup on your phone):
 
-1. Install **Tailscale** on this desktop and log in.
-2. Install **Tailscale** on your Android phone and log in with the same account.
-3. On your phone's browser (Chrome), open:
+1. On your desktop, start the server and tunnel:
+   ```bash
+   npm run start
+   npm run tunnel
    ```
-   http://<YOUR-DESKTOP-TAILSCALE-IP>:5173
-   ```
-4. Tap the **three dots menu** in Chrome and select **"Add to Home screen"** or **"Install App"**.
+2. The terminal will display your secure HTTPS link (e.g. `https://your-mapeta.trycloudflare.com`).
+3. Open that link in **Google Chrome** on your Android phone.
+4. Tap the **three dots menu (⋮)** in Chrome and select **"Add to Home screen"** or **"Install App"**.
 5. Mount your phone on your car dashboard, choose your destination, tap **Go**, and enjoy voice-guided navigation!
 
 ---

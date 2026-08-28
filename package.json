@@ -11,6 +11,8 @@
     "server:dev": "tsx watch server/index.ts",
     "server:build": "tsc -p server/tsconfig.json",
     "server:start": "node dist-server/index.js",
+    "start": "node dist-server/index.js",
+    "tunnel": "bin\\cloudflared.exe tunnel --url http://localhost:3000",
     "build": "npm run client:build && npm run server:build",
     "typecheck": "tsc -b && tsc -p server/tsconfig.json --noEmit"
   },
