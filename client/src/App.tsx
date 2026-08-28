@@ -11,7 +11,7 @@ import { useOrientation } from './hooks/useOrientation';
 import { useNavigation } from './hooks/useNavigation';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useIncidentSocket } from './hooks/useIncidentSocket';
-import { parseOSRMRoute } from './utils/routeUtils';
+import { processMultiRoutes } from './utils/routeUtils';
 import type { Incident, RouteInfo } from './types/navigation';
 
 export default function App() {
@@ -19,7 +19,6 @@ export default function App() {
   const [allRoutes, setAllRoutes] = useState<RouteInfo[]>([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
   const [selectedProfile, setSelectedProfile] = useState<'driving' | 'bike' | 'foot'>('driving');
-  const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [followUser, setFollowUser] = useState<boolean>(true);
@@ -62,7 +61,7 @@ export default function App() {
     isNavigating,
     () => {
       if (destination && userCoords) {
-        calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile, avoidTolls);
+        calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile);
       }
     }
   );
@@ -70,50 +69,41 @@ export default function App() {
   const calculateRoute = useCallback(async (
     start: [number, number],
     end: [number, number],
-    profile: 'driving' | 'bike' | 'foot',
-    noTolls: boolean
+    profile: 'driving' | 'bike' | 'foot'
   ) => {
     try {
-      const url = `/api/route?start=${start[0]},${start[1]}&end=${end[0]},${end[1]}&profile=${profile}&alternatives=true&avoidTolls=${noTolls}`;
+      const url = `/api/route?start=${start[0]},${start[1]}&end=${end[0]},${end[1]}&profile=${profile}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.data.routes && json.data.routes.length > 0) {
-        const parsedRoutes = json.data.routes.map((r: any, idx: number) => parseOSRMRoute(r, profile, idx));
+        const parsedRoutes = processMultiRoutes(json.data.routes, profile, incidents);
         setAllRoutes(parsedRoutes);
         setSelectedRouteIndex(0);
       }
     } catch (err) {
       console.error('[App] Failed to calculate route:', err);
     }
-  }, []);
+  }, [incidents]);
 
   const handleMapClick = useCallback((coords: [number, number]) => {
     if (isNavigating) return;
     setDestination(coords);
     const startLng = userCoords ? userCoords.longitude : 101.6932;
     const startLat = userCoords ? userCoords.latitude : 3.1408;
-    calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
-  }, [isNavigating, userCoords, selectedProfile, avoidTolls, calculateRoute]);
+    calculateRoute([startLng, startLat], coords, selectedProfile);
+  }, [isNavigating, userCoords, selectedProfile, calculateRoute]);
 
   const handleSearchSelect = (coords: [number, number]) => {
     setDestination(coords);
     const startLng = userCoords ? userCoords.longitude : 101.6932;
     const startLat = userCoords ? userCoords.latitude : 3.1408;
-    calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
+    calculateRoute([startLng, startLat], coords, selectedProfile);
   };
 
   const handleSelectProfile = (profile: 'driving' | 'bike' | 'foot') => {
     setSelectedProfile(profile);
     if (destination && userCoords) {
-      calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile, avoidTolls);
-    }
-  };
-
-  const handleToggleAvoidTolls = () => {
-    const nextAvoid = !avoidTolls;
-    setAvoidTolls(nextAvoid);
-    if (destination && userCoords) {
-      calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile, nextAvoid);
+      calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile);
     }
   };
 
@@ -295,16 +285,13 @@ export default function App() {
         />
       )}
 
-      {!isNavigating && activeRoute && (
+      {!isNavigating && allRoutes.length > 0 && (
         <RouteSummary
-          route={activeRoute}
           allRoutes={allRoutes}
           selectedRouteIndex={selectedRouteIndex}
           onSelectRouteIndex={(idx) => setSelectedRouteIndex(idx)}
           selectedProfile={selectedProfile}
           onSelectProfile={handleSelectProfile}
-          avoidTolls={avoidTolls}
-          onToggleAvoidTolls={handleToggleAvoidTolls}
           onStartNavigation={handleStartNavigation}
           onClose={() => {
             setAllRoutes([]);

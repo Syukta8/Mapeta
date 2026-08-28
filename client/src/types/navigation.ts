@@ -16,19 +16,21 @@ export type ManeuverType =
   | 'depart';
 
 export interface RouteStep {
-  distance: number; // meters
-  duration: number; // seconds
+  distance: number;
+  duration: number;
   name: string;
   instruction: string;
   maneuverType: ManeuverType;
   modifier?: string;
-  location: [number, number]; // [lng, lat]
+  location: [number, number];
 }
 
 export interface RouteInfo {
-  id?: string;
+  id: string;
   distance: number; // meters
-  duration: number; // seconds
+  rawDuration: number; // base duration without traffic (seconds)
+  trafficDelaySec: number; // simulated delay from traffic jams/hazards (seconds)
+  duration: number; // total duration = rawDuration + trafficDelaySec (seconds)
   geometry: {
     type: 'LineString';
     coordinates: [number, number][];
@@ -36,9 +38,11 @@ export interface RouteInfo {
   steps: RouteStep[];
   summary: string;
   profile: 'driving' | 'bike' | 'foot';
-  hasTolls?: boolean;
-  tollFareEstimate?: string;
-  label?: string;
+  hasTolls: boolean;
+  tollFareEstimate: string;
+  label: string;
+  trafficStatus: 'smooth' | 'moderate' | 'heavy';
+  incidentCount: number;
 }
 
 export interface Incident {

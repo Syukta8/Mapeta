@@ -30,3 +30,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Implemented smooth Map Dragging & Pan gestures, Toll Fare options (Avoid Tolls toggle), and Multi-Route Alternative Selection cards and interactive polyline switching.
 2026-08-28 — Redesigned UI with minimalist Genshin Impact Celestia & Paimon theme aesthetic (royal gold #d3bc8e, deep starlight night #0c1322, frosted glass acrylics, Primogem route glow, and Cinzel/Plus Jakarta Sans typography).
 2026-08-28 — Added 1-click start-mapeta.cmd master launcher for local hosting with automatic IP discovery and Cloudflare tunnel remote access.
+2026-08-28 — Implemented Dynamic Multi-Route Combination Matrix (parallel toll + non-toll harvesting, traffic jam delay penalty simulation +5 to +15m, and sort filters by Fastest Time, Lowest Toll, and Least Traffic).
