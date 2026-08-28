@@ -1,4 +1,4 @@
-﻿# Mapeta — MEMORY
+# Mapeta — MEMORY
 
 ## What this is
 Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alternative web application. It features WebGL vector map rendering (MapLibre GL JS), turn-by-turn voice navigation HUD, real-time crowdsourced incident reporting via WebSockets, GPS speedometer, traffic congestion heatmaps, and Android PWA support over Tailscale/WireGuard.
@@ -20,4 +20,9 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 - Screen Wake-Lock and Geolocation APIs require secure context (HTTPS / localhost).
 
 ## Log
-2026-08-28 — Repository initialized and architectural plan approved.
+2026-08-28 — Initialized workspace foundation, SQLite DB, and WebSocket server (Commit a379e2b).
+2026-08-28 — Integrated MapLibre GL JS vector rendering with Day/Night automotive themes & 3D tilt (Commit 62498ea).
+2026-08-28 — Added Turn-by-Turn Navigation HUD, Web Speech Voice Guidance, and GPS Speedometer (Commit 7116cf9).
+2026-08-28 — Added Waze-style live incident reporting drawer, interactive badges, and WebSocket sync (Commit 369e03e).
+2026-08-28 — Added Android PWA manifest, Screen Wake-Lock API, SearchBar autocomplete, security audit, and layman README.md (Commit 47e1eac).
+2026-08-28 — Configured Git remote origin: https://github.com/Syukta8/Mapeta.git.
