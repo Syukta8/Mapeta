@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Navigation, Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Navigation, Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus } from 'lucide-react';
 import { MapView } from './components/Map/MapView';
 import { NavigationHUD } from './components/Navigation/NavigationHUD';
 import { RouteSummary } from './components/UI/RouteSummary';
+import { ReportModal } from './components/Incidents/ReportModal';
+import { IncidentDetails } from './components/Incidents/IncidentDetails';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useOrientation } from './hooks/useOrientation';
 import { useNavigation } from './hooks/useNavigation';
+import { useIncidentSocket } from './hooks/useIncidentSocket';
 import { parseOSRMRoute } from './utils/routeUtils';
 import type { Incident, RouteInfo } from './types/navigation';
 
 export default function App() {
   const [theme, setTheme] = useState<'day' | 'night'>('night');
-  const [serverStatus, setServerStatus] = useState<string>('Connecting...');
-  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [activeRoute, setActiveRoute] = useState<RouteInfo | null>(null);
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteInfo[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<'driving' | 'bike' | 'foot'>('driving');
@@ -20,6 +21,13 @@ export default function App() {
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [followUser, setFollowUser] = useState<boolean>(true);
   const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
+
+  // Incident state modals
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+
+  // Live WebSocket incident connection
+  const { isConnected, incidents, reportIncident, voteIncident } = useIncidentSocket();
 
   // High accuracy GPS & Speedometer
   const geo = useGeolocation(true);
@@ -57,22 +65,6 @@ export default function App() {
       }
     }
   );
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => r.json())
-      .then((data) => setServerStatus(`Online (${data.app})`))
-      .catch(() => setServerStatus('Offline'));
-
-    fetch('/api/incidents')
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success) {
-          setIncidents(res.data);
-        }
-      })
-      .catch(console.error);
-  }, []);
 
   // Calculate route between start and end
   const calculateRoute = useCallback(async (start: [number, number], end: [number, number], profile: 'driving' | 'bike' | 'foot') => {
@@ -145,7 +137,6 @@ export default function App() {
       const curr = coords[idx];
       const next = coords[idx + 1];
 
-      // Calculate bearing to next point
       const y = Math.sin(((next[0] - curr[0]) * Math.PI) / 180) * Math.cos((next[1] * Math.PI) / 180);
       const x =
         Math.cos((curr[1] * Math.PI) / 180) * Math.sin((next[1] * Math.PI) / 180) -
@@ -158,7 +149,7 @@ export default function App() {
         lng: curr[0],
         lat: curr[1],
         heading: Math.round(bearing),
-        speedKmh: Math.floor(Math.random() * 20) + 45, // 45-65 km/h
+        speedKmh: Math.floor(Math.random() * 20) + 45,
       });
 
       idx += 1;
@@ -175,7 +166,7 @@ export default function App() {
   };
 
   const handleIncidentClick = useCallback((inc: Incident) => {
-    alert(`Incident: ${inc.title}\nDetails: ${inc.description || 'No description'}\nVotes: +${inc.upvotes} / -${inc.downvotes}`);
+    setSelectedIncident(inc);
   }, []);
 
   return (
@@ -190,9 +181,11 @@ export default function App() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-sm font-bold tracking-wide text-white leading-none">Mapeta</h1>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
               </div>
-              <span className="text-[10px] text-sky-400 font-medium">{serverStatus}</span>
+              <span className="text-[10px] text-sky-400 font-medium">
+                {isConnected ? 'Live Sync' : 'Reconnecting...'}
+              </span>
             </div>
           </div>
 
@@ -216,6 +209,15 @@ export default function App() {
 
       {/* Floating Map Action Controls */}
       <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2.5">
+        {/* Waze-style Quick Report FAB */}
+        <button
+          onClick={() => setIsReportModalOpen(true)}
+          className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black shadow-2xl shadow-orange-500/30 border border-amber-300 active:scale-95 transition-all"
+          title="Report Hazard / Incident"
+        >
+          <Plus className="w-6 h-6 stroke-[3]" />
+        </button>
+
         {/* Drive Simulation Test button */}
         {activeRoute && (
           <button
@@ -281,6 +283,29 @@ export default function App() {
             setActiveRoute(null);
             setAlternativeRoutes([]);
             setDestination(null);
+          }}
+        />
+      )}
+
+      {/* Incident Reporting Sheet Modal */}
+      {isReportModalOpen && (
+        <ReportModal
+          userCoords={userCoords}
+          onClose={() => setIsReportModalOpen(false)}
+          onSubmit={async (inc) => {
+            await reportIncident(inc);
+          }}
+        />
+      )}
+
+      {/* Incident Details & Voting Popup */}
+      {selectedIncident && (
+        <IncidentDetails
+          incident={selectedIncident}
+          onClose={() => setSelectedIncident(null)}
+          onVote={async (id, vote) => {
+            await voteIncident(id, vote);
+            setSelectedIncident(null);
           }}
         />
       )}
