@@ -37,19 +37,25 @@ npm run dev
 
 ---
 
+## 🚀 1-Click Master Start (Recommended)
+
+Simply double-click **`start-mapeta.cmd`** (or `start-mapeta.bat`) in the project folder!
+
+It will automatically:
+1. Verify the production build.
+2. Display your **Local WiFi IP** (e.g. `http://10.1.39.107:3000`) for zero-lag driving on phone hotspot.
+3. Generate a secure **HTTPS Cloudflare Tunnel** (`https://*.trycloudflare.com`) for remote 4G/5G mobile access anywhere on the road.
+
+---
+
 ## 📱 How to Use on Your Phone Anywhere on the Road
 
-You can access Mapeta from your phone anywhere on 4G/5G cellular data using the built-in, free **Cloudflare Tunnel** (bypasses any router or corporate firewalls with zero setup on your phone):
-
-1. On your desktop, start the server and tunnel:
-   ```bash
-   npm run start
-   npm run tunnel
-   ```
-2. The terminal will display your secure HTTPS link (e.g. `https://your-mapeta.trycloudflare.com`).
-3. Open that link in **Google Chrome** on your Android phone.
-4. Tap the **three dots menu (⋮)** in Chrome and select **"Add to Home screen"** or **"Install App"**.
-5. Mount your phone on your car dashboard, choose your destination, tap **Go**, and enjoy voice-guided navigation!
+1. Double-click `start-mapeta.cmd` on your PC.
+2. Open the displayed URL in **Google Chrome** on your Android phone:
+   - On same WiFi / Hotspot: Open `http://<YOUR-PC-IP>:3000`
+   - On 4G/5G Mobile Data: Open the secure `https://*.trycloudflare.com` link
+3. Tap the **three dots menu (⋮)** in Chrome and select **"Add to Home screen"** or **"Install App"**.
+4. Mount your phone on your car dashboard, choose your destination, tap **Navigate**, and enjoy voice-guided navigation!
 
 ---
 
