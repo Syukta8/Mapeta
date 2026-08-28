@@ -34,4 +34,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Upgraded route search algorithm with multi-detour waypoints to guarantee multiple distinct routes (Expressway vs Federal trunk road vs Coastal).
 2026-08-28 — Overhauled UI to Google Pixel Experience (Material You / Android 15 tokens, rounded pills, Google Sans/Jakarta font) and added live in-navigation route switcher bottom sheet.
 2026-08-28 — Standing Rule: Do not deploy/restart the live server/tunnel until the user explicitly requests it. Dynamic multi-route algorithm verified 100% mathematical vector geometry with zero hardcoded paths.
-2026-08-28 — Implemented 4-Route Dynamic Corridor Engine with nearest road node snapping (/nearest/v1/driving), guaranteeing up to 4 diverse distinct routes (Fastest Toll Highway vs Federal Trunk vs Alternate Corridors) with interactive map polyline selection and differential toll/time badges.
+2026-08-28 — Fixed route line blinking/flickering by implementing persistent WebGL GeoJSON FeatureCollection source with data-driven styling ('line-sort-key', 'line-color', 'line-width') and in-place setData() buffer updates.

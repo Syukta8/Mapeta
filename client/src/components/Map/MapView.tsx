@@ -36,6 +36,7 @@ export function MapView({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const lastFitBoundsKeyRef = useRef<string>('');
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -87,6 +88,7 @@ export function MapView({
     mapRef.current.setStyle(targetStyle);
   }, [theme]);
 
+  // Update user position marker and camera follow
   useEffect(() => {
     if (!mapRef.current || !userCoords) return;
 
@@ -126,34 +128,40 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
+  // Zero-Flicker WebGL Persistent Route Rendering
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const renderRoutes = () => {
-      for (let i = 0; i < 6; i++) {
-        if (map.getLayer(`route-casing-${i}`)) map.removeLayer(`route-casing-${i}`);
-        if (map.getLayer(`route-line-${i}`)) map.removeLayer(`route-line-${i}`);
-        if (map.getSource(`route-source-${i}`)) map.removeSource(`route-source-${i}`);
-      }
+    const updateRoutes = () => {
+      const routesToRender = allRoutes.length > 0 ? allRoutes : activeRoute ? [activeRoute] : [];
 
-      if (allRoutes.length === 0 && activeRoute) {
-        allRoutes = [activeRoute];
-      }
+      const geojsonData: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+        type: 'FeatureCollection',
+        features: routesToRender.map((r, idx) => ({
+          type: 'Feature',
+          properties: {
+            routeIndex: idx,
+            isSelected: idx === selectedRouteIndex ? 1 : 0,
+          },
+          geometry: r.geometry,
+        })),
+      };
 
-      allRoutes.forEach((r, idx) => {
-        const isSelected = idx === selectedRouteIndex;
-        const sourceId = `route-source-${idx}`;
-        const casingLayerId = `route-casing-${idx}`;
-        const lineLayerId = `route-line-${idx}`;
+      const sourceId = 'mapeta-routes-source';
+      const casingLayerId = 'mapeta-routes-casing';
+      const lineLayerId = 'mapeta-routes-line';
 
+      const existingSource = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+
+      if (existingSource) {
+        // Fast in-place WebGL buffer update (ZERO blinking)
+        existingSource.setData(geojsonData);
+      } else {
+        // Initialize persistent source and layers once
         map.addSource(sourceId, {
           type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: { routeIndex: idx },
-            geometry: r.geometry,
-          },
+          data: geojsonData,
         });
 
         map.addLayer({
@@ -163,11 +171,12 @@ export function MapView({
           layout: {
             'line-join': 'round',
             'line-cap': 'round',
+            'line-sort-key': ['get', 'isSelected'],
           },
           paint: {
-            'line-color': isSelected ? '#042f66' : '#1b1c20',
-            'line-width': isSelected ? 8 : 5,
-            'line-opacity': isSelected ? 0.9 : 0.6,
+            'line-color': ['case', ['==', ['get', 'isSelected'], 1], '#042f66', '#1b1c20'],
+            'line-width': ['case', ['==', ['get', 'isSelected'], 1], 9, 5],
+            'line-opacity': ['case', ['==', ['get', 'isSelected'], 1], 0.95, 0.55],
           },
         });
 
@@ -178,38 +187,60 @@ export function MapView({
           layout: {
             'line-join': 'round',
             'line-cap': 'round',
+            'line-sort-key': ['get', 'isSelected'],
           },
           paint: {
-            'line-color': isSelected ? '#a8c7fa' : '#64748b',
-            'line-width': isSelected ? 5 : 3.5,
-            'line-opacity': isSelected ? 1 : 0.75,
+            'line-color': ['case', ['==', ['get', 'isSelected'], 1], '#a8c7fa', '#64748b'],
+            'line-width': ['case', ['==', ['get', 'isSelected'], 1], 6, 3.5],
+            'line-opacity': ['case', ['==', ['get', 'isSelected'], 1], 1, 0.75],
           },
         });
 
-        map.on('click', lineLayerId, () => {
-          if (onSelectAlternative) {
-            onSelectAlternative(idx);
+        map.on('click', lineLayerId, (e) => {
+          if (e.features && e.features[0] && onSelectAlternative) {
+            const idx = Number(e.features[0].properties?.routeIndex);
+            if (!isNaN(idx)) {
+              onSelectAlternative(idx);
+            }
           }
         });
-      });
 
-      if (!isNavigating && allRoutes[selectedRouteIndex]) {
-        const coords = allRoutes[selectedRouteIndex].geometry.coordinates;
-        const bounds = coords.reduce(
-          (b, c) => b.extend(c as [number, number]),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
-        );
-        map.fitBounds(bounds, { padding: { top: 100, bottom: 220, left: 40, right: 40 } });
+        map.on('mouseenter', lineLayerId, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', lineLayerId, () => {
+          map.getCanvas().style.cursor = '';
+        });
+      }
+
+      // Fit bounds only when route destination changes, not on every alternative switch
+      if (!isNavigating && routesToRender.length > 0) {
+        const boundsKey = `${routesToRender[0]?.distance}_${routesToRender.length}`;
+        if (lastFitBoundsKeyRef.current !== boundsKey) {
+          lastFitBoundsKeyRef.current = boundsKey;
+          const allCoords = routesToRender.flatMap((r) => r.geometry.coordinates);
+          if (allCoords.length > 0) {
+            const bounds = allCoords.reduce(
+              (b, c) => b.extend(c as [number, number]),
+              new maplibregl.LngLatBounds(allCoords[0], allCoords[0])
+            );
+            map.fitBounds(bounds, { padding: { top: 90, bottom: 220, left: 40, right: 40 } });
+          }
+        }
+      } else if (routesToRender.length === 0) {
+        lastFitBoundsKeyRef.current = '';
       }
     };
 
     if (map.isStyleLoaded()) {
-      renderRoutes();
+      updateRoutes();
     } else {
-      map.once('styledata', renderRoutes);
+      map.once('styledata', updateRoutes);
     }
   }, [allRoutes, selectedRouteIndex, activeRoute, isNavigating, onSelectAlternative]);
 
+  // Incident Markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
