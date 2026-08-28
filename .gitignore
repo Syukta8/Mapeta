@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-server
+data
+*.local
+*.tsbuildinfo
+write_file.py
+write_stdin.py
+.env
+.DS_Store

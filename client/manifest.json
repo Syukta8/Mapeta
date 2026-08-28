@@ -1,0 +1,16 @@
+{
+  "name": "Mapeta Navigation",
+  "short_name": "Mapeta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='%2338bdf8'><rect width='192' height='192' rx='36' fill='%230f172a'/><path d='M96 30C66.18 30 42 54.18 42 84c0 40.5 54 98 54 98s54-57.5 54-98c0-29.82-24.18-54-54-54zm0 73.5c-10.77 0-19.5-8.73-19.5-19.5S85.23 64.5 96 64.5s19.5 8.73 19.5 19.5-8.73 19.5-19.5 19.5z' fill='%2338bdf8'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
