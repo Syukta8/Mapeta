@@ -25,6 +25,14 @@ export interface RouteStep {
   location: [number, number];
 }
 
+export interface TollBreakdownItem {
+  expressway: string;
+  code: string;
+  distanceKm: number;
+  fare: number;
+  type: 'open' | 'closed';
+}
+
 export interface RouteInfo {
   id: string;
   distance: number; // meters
@@ -40,6 +48,8 @@ export interface RouteInfo {
   profile: 'driving' | 'bike' | 'foot';
   hasTolls: boolean;
   tollFareEstimate: string;
+  tollTotal: number;
+  tollBreakdown: TollBreakdownItem[];
   label: string;
   trafficStatus: 'smooth' | 'moderate' | 'heavy';
   incidentCount: number;

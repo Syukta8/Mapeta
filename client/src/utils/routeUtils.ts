@@ -1,7 +1,8 @@
 import type { RouteInfo, RouteStep, ManeuverType, Incident } from '../types/navigation';
+import { calculateLLMTolls } from './tollEngine';
 
 /**
- * Deduplicates raw OSRM routes, detects tolls, and calculates traffic delay penalties from active incidents
+ * Deduplicates raw OSRM routes, detects LLM tolls, and calculates traffic delay penalties from active incidents
  */
 export function processMultiRoutes(
   rawRoutes: any[],
@@ -10,11 +11,6 @@ export function processMultiRoutes(
 ): RouteInfo[] {
   const parsedRoutes: RouteInfo[] = [];
 
-  const tollKeywords = [
-    'toll', 'tol', 'lebuhraya', 'expressway', 'highway', 'plaza tol', 'e1', 'e2', 'e11',
-    'plus', 'mex', 'duke', 'ldp', 'kesas', 'smart', 'spe', 'npe', 'sprint', 'guthrie', 'silk'
-  ];
-
   rawRoutes.forEach((osrmRoute, index) => {
     const rawDistance = Math.round(osrmRoute.distance || 0);
     const rawDuration = Math.round(osrmRoute.duration || 0);
@@ -22,7 +18,7 @@ export function processMultiRoutes(
 
     if (coords.length === 0) return;
 
-    // Check if this route is substantially distinct from already collected routes (distance diff > 500m or duration diff > 60s)
+    // Check if this route is substantially distinct (distance diff > 500m or time diff > 60s)
     const isDuplicate = parsedRoutes.some((existing) => {
       const distDiff = Math.abs(existing.distance - rawDistance);
       const timeDiff = Math.abs(existing.rawDuration - rawDuration);
@@ -32,7 +28,6 @@ export function processMultiRoutes(
     if (isDuplicate) return;
 
     const steps: RouteStep[] = [];
-    let detectedToll = false;
 
     if (osrmRoute.legs && osrmRoute.legs.length > 0) {
       for (const leg of osrmRoute.legs) {
@@ -42,11 +37,6 @@ export function processMultiRoutes(
             const type = mapOSRMType(maneuver.type, maneuver.modifier);
             const name = step.name || 'Unnamed Road';
             const instruction = generateInstruction(type, maneuver.modifier, name);
-
-            const lowerName = name.toLowerCase();
-            if (tollKeywords.some((k) => lowerName.includes(k))) {
-              detectedToll = true;
-            }
 
             steps.push({
               distance: step.distance || 0,
@@ -62,7 +52,15 @@ export function processMultiRoutes(
       }
     }
 
-    // Traffic congestion penalty calculation
+    // Calculate LLM Toll Fares & Itemized Expressway Breakdown
+    const tollResult = profile === 'driving' ? calculateLLMTolls(steps) : {
+      hasTolls: false,
+      totalFare: 0,
+      formattedTotal: 'Free',
+      breakdown: [],
+    };
+
+    // Traffic congestion penalty calculation from active incidents
     let trafficDelaySec = 0;
     let incidentCount = 0;
     let hasHeavyJam = false;
@@ -97,20 +95,8 @@ export function processMultiRoutes(
       trafficStatus = 'moderate';
     }
 
-    let tollFareEstimate = 'Free';
-    if (profile === 'driving' && detectedToll) {
-      const distKm = rawDistance / 1000;
-      if (distKm > 30) {
-        tollFareEstimate = '~RM 4.80';
-      } else if (distKm > 15) {
-        tollFareEstimate = '~RM 2.50';
-      } else {
-        tollFareEstimate = '~RM 1.60';
-      }
-    }
-
     const summary = osrmRoute.legs?.[0]?.summary || `Via ${steps[1]?.name || 'Highway'}`;
-    const label = detectedToll ? 'Expressway (Toll)' : 'Federal / Trunk Road';
+    const label = tollResult.hasTolls ? 'Expressway (Toll)' : 'Federal / Trunk Road';
 
     parsedRoutes.push({
       id: `route-${index}-${Date.now()}`,
@@ -122,15 +108,16 @@ export function processMultiRoutes(
       steps,
       summary,
       profile,
-      hasTolls: profile === 'driving' ? detectedToll : false,
-      tollFareEstimate: profile === 'driving' && detectedToll ? tollFareEstimate : 'Free',
+      hasTolls: tollResult.hasTolls,
+      tollFareEstimate: tollResult.formattedTotal,
+      tollTotal: tollResult.totalFare,
+      tollBreakdown: tollResult.breakdown,
       label,
       trafficStatus,
       incidentCount,
     });
   });
 
-  // Sort initially by duration
   return parsedRoutes.sort((a, b) => a.duration - b.duration);
 }
 

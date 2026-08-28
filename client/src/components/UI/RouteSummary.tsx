@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Car, Bike, Footprints, Navigation2, X, Clock, DollarSign, ShieldAlert, Check } from 'lucide-react';
+import { Car, Bike, Footprints, Navigation2, X, Clock, DollarSign, ShieldAlert, Check, Info } from 'lucide-react';
 import type { RouteInfo } from '../../types/navigation';
 
 interface RouteSummaryProps {
@@ -24,6 +24,7 @@ export function RouteSummary({
   onClose,
 }: RouteSummaryProps) {
   const [sortFilter, setSortFilter] = useState<SortFilter>('fastest');
+  const [showTollBreakdown, setShowTollBreakdown] = useState<boolean>(false);
 
   const sortedRoutes = useMemo(() => {
     const list = [...allRoutes];
@@ -32,6 +33,7 @@ export function RouteSummary({
     } else if (sortFilter === 'toll') {
       return list.sort((a, b) => {
         if (a.hasTolls !== b.hasTolls) return a.hasTolls ? 1 : -1;
+        if (a.tollTotal !== b.tollTotal) return a.tollTotal - b.tollTotal;
         return a.duration - b.duration;
       });
     } else if (sortFilter === 'traffic') {
@@ -115,7 +117,7 @@ export function RouteSummary({
           </button>
         </div>
 
-        {/* Dynamic Route Sorting Matrix Tabs (Drive mode) */}
+        {/* Dynamic Route Sorting Matrix Tabs */}
         {selectedProfile === 'driving' && allRoutes.length > 1 && (
           <div className="flex items-center gap-1.5 p-1 bg-[#212226]/80 border border-white/5 rounded-2xl">
             <button
@@ -215,6 +217,43 @@ export function RouteSummary({
           </div>
         )}
 
+        {/* LLM Toll Breakdown Modal / Drawer */}
+        {showTollBreakdown && activeRoute && activeRoute.tollBreakdown.length > 0 && (
+          <div className="p-3 bg-[#212226] rounded-2xl border border-[#a8c7fa]/30 flex flex-col gap-2 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-[#a8c7fa]" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">LLM Gazetted Toll Breakdown</span>
+              </div>
+              <button
+                onClick={() => setShowTollBreakdown(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+              {activeRoute.tollBreakdown.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs py-0.5">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-[#e3e2e6]">{item.expressway}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {item.type === 'closed' ? `Distance: ${item.distanceKm} km (Closed Toll)` : 'Open Gantry Toll'}
+                    </span>
+                  </div>
+                  <span className="font-bold text-amber-300">RM {item.fare.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-white/10 pt-1.5 text-xs font-bold">
+              <span className="text-slate-300">Total Toll (Class 1 Car):</span>
+              <span className="text-[#a8c7fa] text-sm">RM {activeRoute.tollTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
         {/* Primary Selected Route Summary & GO Button */}
         {activeRoute && (
           <div className="flex items-center justify-between pt-1">
@@ -223,14 +262,22 @@ export function RouteSummary({
                 <span className="text-3xl font-black text-white leading-none">
                   {formatDuration(activeRoute.duration)}
                 </span>
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                  activeRoute.hasTolls
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                }`}>
-                  {activeRoute.hasTolls ? `Toll: ${activeRoute.tollFareEstimate}` : 'Toll-Free'}
-                </span>
+
+                {/* Clickable LLM Toll Pill Badge */}
+                <button
+                  onClick={() => setShowTollBreakdown(!showTollBreakdown)}
+                  className={`flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full transition-all active:scale-95 ${
+                    activeRoute.hasTolls
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                  title="Click to view LLM Toll Breakdown"
+                >
+                  <span>{activeRoute.hasTolls ? `Toll: ${activeRoute.tollFareEstimate}` : 'Toll-Free'}</span>
+                  {activeRoute.hasTolls && <Info className="w-3 h-3 text-amber-400" />}
+                </button>
               </div>
+
               <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
                 <span>{formatDist(activeRoute.distance)}</span>
                 <span>•</span>
