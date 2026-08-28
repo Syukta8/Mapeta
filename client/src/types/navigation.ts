@@ -26,6 +26,7 @@ export interface RouteStep {
 }
 
 export interface RouteInfo {
+  id?: string;
   distance: number; // meters
   duration: number; // seconds
   geometry: {
@@ -35,6 +36,9 @@ export interface RouteInfo {
   steps: RouteStep[];
   summary: string;
   profile: 'driving' | 'bike' | 'foot';
+  hasTolls?: boolean;
+  tollFareEstimate?: string;
+  label?: string;
 }
 
 export interface Incident {

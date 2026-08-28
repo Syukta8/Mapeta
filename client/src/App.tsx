@@ -16,13 +16,17 @@ import type { Incident, RouteInfo } from './types/navigation';
 
 export default function App() {
   const [theme, setTheme] = useState<'day' | 'night'>('night');
-  const [activeRoute, setActiveRoute] = useState<RouteInfo | null>(null);
-  const [alternativeRoutes, setAlternativeRoutes] = useState<RouteInfo[]>([]);
+  const [allRoutes, setAllRoutes] = useState<RouteInfo[]>([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
   const [selectedProfile, setSelectedProfile] = useState<'driving' | 'bike' | 'foot'>('driving');
+  const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [followUser, setFollowUser] = useState<boolean>(true);
   const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
+
+  // Active route is the selected route index
+  const activeRoute = allRoutes[selectedRouteIndex] || null;
 
   // Incident state modals
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -66,22 +70,26 @@ export default function App() {
     isNavigating,
     () => {
       if (destination && userCoords) {
-        calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile);
+        calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile, avoidTolls);
       }
     }
   );
 
-  // Calculate route between start and end
-  const calculateRoute = useCallback(async (start: [number, number], end: [number, number], profile: 'driving' | 'bike' | 'foot') => {
+  // Calculate route between start and end with multiple alternatives and toll exclusion
+  const calculateRoute = useCallback(async (
+    start: [number, number],
+    end: [number, number],
+    profile: 'driving' | 'bike' | 'foot',
+    noTolls: boolean
+  ) => {
     try {
-      const url = `/api/route?start=${start[0]},${start[1]}&end=${end[0]},${end[1]}&profile=${profile}&alternatives=true`;
+      const url = `/api/route?start=${start[0]},${start[1]}&end=${end[0]},${end[1]}&profile=${profile}&alternatives=true&avoidTolls=${noTolls}`;
       const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.data.routes && json.data.routes.length > 0) {
-        const primary = parseOSRMRoute(json.data.routes[0], profile);
-        const alts = json.data.routes.slice(1).map((r: any) => parseOSRMRoute(r, profile));
-        setActiveRoute(primary);
-        setAlternativeRoutes(alts);
+        const parsedRoutes = json.data.routes.map((r: any, idx: number) => parseOSRMRoute(r, profile, idx));
+        setAllRoutes(parsedRoutes);
+        setSelectedRouteIndex(0);
       }
     } catch (err) {
       console.error('[App] Failed to calculate route:', err);
@@ -94,22 +102,31 @@ export default function App() {
     setDestination(coords);
     const startLng = userCoords ? userCoords.longitude : 101.6932;
     const startLat = userCoords ? userCoords.latitude : 3.1408;
-    calculateRoute([startLng, startLat], coords, selectedProfile);
-  }, [isNavigating, userCoords, selectedProfile, calculateRoute]);
+    calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
+  }, [isNavigating, userCoords, selectedProfile, avoidTolls, calculateRoute]);
 
   // Handle search bar selection
   const handleSearchSelect = (coords: [number, number]) => {
     setDestination(coords);
     const startLng = userCoords ? userCoords.longitude : 101.6932;
     const startLat = userCoords ? userCoords.latitude : 3.1408;
-    calculateRoute([startLng, startLat], coords, selectedProfile);
+    calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
   };
 
   // Profile switch
   const handleSelectProfile = (profile: 'driving' | 'bike' | 'foot') => {
     setSelectedProfile(profile);
     if (destination && userCoords) {
-      calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile);
+      calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile, avoidTolls);
+    }
+  };
+
+  // Toggle Avoid Tolls
+  const handleToggleAvoidTolls = () => {
+    const nextAvoid = !avoidTolls;
+    setAvoidTolls(nextAvoid);
+    if (destination && userCoords) {
+      calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile, nextAvoid);
     }
   };
 
@@ -122,8 +139,8 @@ export default function App() {
   // Stop navigation
   const handleStopNavigation = () => {
     setIsNavigating(false);
-    setActiveRoute(null);
-    setAlternativeRoutes([]);
+    setAllRoutes([]);
+    setSelectedRouteIndex(0);
     setDestination(null);
     stopDriveSimulation();
   };
@@ -306,13 +323,17 @@ export default function App() {
       {!isNavigating && activeRoute && (
         <RouteSummary
           route={activeRoute}
-          alternativeRoutes={alternativeRoutes}
+          allRoutes={allRoutes}
+          selectedRouteIndex={selectedRouteIndex}
+          onSelectRouteIndex={(idx) => setSelectedRouteIndex(idx)}
           selectedProfile={selectedProfile}
           onSelectProfile={handleSelectProfile}
+          avoidTolls={avoidTolls}
+          onToggleAvoidTolls={handleToggleAvoidTolls}
           onStartNavigation={handleStartNavigation}
           onClose={() => {
-            setActiveRoute(null);
-            setAlternativeRoutes([]);
+            setAllRoutes([]);
+            setSelectedRouteIndex(0);
             setDestination(null);
           }}
         />
@@ -347,11 +368,14 @@ export default function App() {
           theme={theme}
           userCoords={userCoords}
           activeRoute={activeRoute}
-          alternativeRoutes={alternativeRoutes}
+          allRoutes={allRoutes}
+          selectedRouteIndex={selectedRouteIndex}
           incidents={incidents}
           isNavigating={isNavigating}
           followUser={followUser}
           onMapClick={handleMapClick}
+          onUserPan={() => setFollowUser(false)}
+          onSelectAlternative={(idx) => setSelectedRouteIndex(idx)}
           onIncidentClick={handleIncidentClick}
         />
       </main>

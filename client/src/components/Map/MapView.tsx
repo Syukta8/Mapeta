@@ -7,11 +7,13 @@ interface MapViewProps {
   theme: 'day' | 'night';
   userCoords: { latitude: number; longitude: number; heading: number | null } | null;
   activeRoute: RouteInfo | null;
-  alternativeRoutes?: RouteInfo[];
+  allRoutes?: RouteInfo[];
+  selectedRouteIndex?: number;
   incidents: Incident[];
   isNavigating: boolean;
   followUser: boolean;
   onMapClick?: (coords: [number, number]) => void;
+  onUserPan?: () => void;
   onIncidentClick?: (incident: Incident) => void;
   onSelectAlternative?: (index: number) => void;
 }
@@ -20,19 +22,22 @@ export function MapView({
   theme,
   userCoords,
   activeRoute,
-  alternativeRoutes = [],
+  allRoutes = [],
+  selectedRouteIndex = 0,
   incidents,
   isNavigating,
   followUser,
   onMapClick,
+  onUserPan,
   onIncidentClick,
+  onSelectAlternative,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
 
-  // 1. Initialize MapLibre instance
+  // 1. Initialize MapLibre instance with explicit drag & touch gesture support
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -46,20 +51,29 @@ export function MapView({
       zoom: 15,
       pitch: isNavigating ? 55 : 0,
       bearing: userCoords?.heading || 0,
+      dragPan: true,
+      scrollZoom: true,
+      touchZoomRotate: true,
+      dragRotate: true,
       attributionControl: false,
     });
 
-    // Add scale bar
     map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
+    // Click handler for picking destination
     map.on('click', (e) => {
       if (onMapClick) {
         onMapClick([e.lngLat.lng, e.lngLat.lat]);
       }
     });
 
-    map.on('load', () => {
-      // Map loaded ready for layers
+    // Detect user dragging or touch panning to disable automatic recentering
+    map.on('dragstart', () => {
+      if (onUserPan) onUserPan();
+    });
+
+    map.on('touchstart', () => {
+      if (onUserPan) onUserPan();
     });
 
     mapRef.current = map;
@@ -84,9 +98,8 @@ export function MapView({
     const { latitude, longitude, heading } = userCoords;
 
     if (!userMarkerRef.current) {
-      // Create glowing Waze-style navigation cursor
       const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center w-12 h-12';
+      el.className = 'relative flex items-center justify-center w-12 h-12 pointer-events-none';
       el.innerHTML = `
         <div class="user-pos-pulse absolute w-12 h-12 rounded-full bg-sky-400/40"></div>
         <div class="w-8 h-8 rounded-full bg-sky-500 border-2 border-white shadow-2xl flex items-center justify-center z-10">
@@ -102,13 +115,12 @@ export function MapView({
       userMarkerRef.current.setLngLat([longitude, latitude]);
     }
 
-    // Rotate cursor arrow
     const arrow = userMarkerRef.current.getElement().querySelector('#marker-arrow') as HTMLElement | null;
     if (arrow && heading !== null) {
       arrow.style.transform = `rotate(${heading}deg)`;
     }
 
-    // Follow camera if active
+    // Only auto-pan camera if followUser is explicitly true
     if (followUser && mapRef.current) {
       mapRef.current.easeTo({
         center: [longitude, latitude],
@@ -120,34 +132,42 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
-  // 4. Render Route Polylines
+  // 4. Render Multiple Routes and Alternative Route Polylines
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const renderRoutes = () => {
-      // Remove existing route layers/sources
-      ['route-casing', 'route-line', 'alt-route-1', 'alt-route-2'].forEach((layerId) => {
-        if (map.getLayer(layerId)) map.removeLayer(layerId);
-      });
-      ['route-source', 'alt-source-1', 'alt-source-2'].forEach((sourceId) => {
-        if (map.getSource(sourceId)) map.removeSource(sourceId);
-      });
+      // Clear existing layers & sources
+      for (let i = 0; i < 5; i++) {
+        if (map.getLayer(`route-casing-${i}`)) map.removeLayer(`route-casing-${i}`);
+        if (map.getLayer(`route-line-${i}`)) map.removeLayer(`route-line-${i}`);
+        if (map.getSource(`route-source-${i}`)) map.removeSource(`route-source-${i}`);
+      }
 
-      // Render alternative routes first
-      alternativeRoutes.forEach((alt, idx) => {
-        const sourceId = `alt-source-${idx + 1}`;
-        const layerId = `alt-route-${idx + 1}`;
+      if (allRoutes.length === 0 && activeRoute) {
+        allRoutes = [activeRoute];
+      }
+
+      // Render alternative routes first, selected route on top
+      allRoutes.forEach((r, idx) => {
+        const isSelected = idx === selectedRouteIndex;
+        const sourceId = `route-source-${idx}`;
+        const casingLayerId = `route-casing-${idx}`;
+        const lineLayerId = `route-line-${idx}`;
+
         map.addSource(sourceId, {
           type: 'geojson',
           data: {
             type: 'Feature',
-            properties: {},
-            geometry: alt.geometry,
+            properties: { routeIndex: idx },
+            geometry: r.geometry,
           },
         });
+
+        // Casing outline
         map.addLayer({
-          id: layerId,
+          id: casingLayerId,
           type: 'line',
           source: sourceId,
           layout: {
@@ -155,63 +175,44 @@ export function MapView({
             'line-cap': 'round',
           },
           paint: {
-            'line-color': '#64748b',
-            'line-width': 5,
-            'line-opacity': 0.6,
+            'line-color': isSelected ? '#0284c7' : '#334155',
+            'line-width': isSelected ? 9 : 6,
+            'line-opacity': isSelected ? 1 : 0.7,
           },
+        });
+
+        // Inner line
+        map.addLayer({
+          id: lineLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': isSelected ? (r.hasTolls ? '#38bdf8' : '#34d399') : '#64748b',
+            'line-width': isSelected ? 6 : 4,
+            'line-opacity': isSelected ? 1 : 0.8,
+          },
+        });
+
+        // Click on alternative route polyline to switch to it
+        map.on('click', lineLayerId, () => {
+          if (onSelectAlternative) {
+            onSelectAlternative(idx);
+          }
         });
       });
 
-      // Render primary active route
-      if (activeRoute) {
-        map.addSource('route-source', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: activeRoute.geometry,
-          },
-        });
-
-        // Dark outline casing
-        map.addLayer({
-          id: 'route-casing',
-          type: 'line',
-          source: 'route-source',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#0284c7',
-            'line-width': 9,
-          },
-        });
-
-        // Glowing vibrant route line
-        map.addLayer({
-          id: 'route-line',
-          type: 'line',
-          source: 'route-source',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#38bdf8',
-            'line-width': 6,
-          },
-        });
-
-        // Fit map bounds to show route overview if not actively in HUD drive mode
-        if (!isNavigating) {
-          const coords = activeRoute.geometry.coordinates;
-          const bounds = coords.reduce(
-            (b, c) => b.extend(c as [number, number]),
-            new maplibregl.LngLatBounds(coords[0], coords[0])
-          );
-          map.fitBounds(bounds, { padding: { top: 100, bottom: 180, left: 40, right: 40 } });
-        }
+      // Fit map bounds to show full route if not actively driving
+      if (!isNavigating && allRoutes[selectedRouteIndex]) {
+        const coords = allRoutes[selectedRouteIndex].geometry.coordinates;
+        const bounds = coords.reduce(
+          (b, c) => b.extend(c as [number, number]),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: { top: 100, bottom: 220, left: 40, right: 40 } });
       }
     };
 
@@ -220,18 +221,16 @@ export function MapView({
     } else {
       map.once('styledata', renderRoutes);
     }
-  }, [activeRoute, alternativeRoutes, isNavigating]);
+  }, [allRoutes, selectedRouteIndex, activeRoute, isNavigating, onSelectAlternative]);
 
   // 5. Render Incident Badges
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear old markers
     incidentMarkersRef.current.forEach((marker) => marker.remove());
     incidentMarkersRef.current.clear();
 
-    // Icon SVGs per category
     const iconColors: Record<string, { bg: string; text: string; label: string; emoji: string }> = {
       police: { bg: 'bg-blue-600', text: 'text-white', label: 'Police', emoji: '👮' },
       hazard: { bg: 'bg-amber-500', text: 'text-slate-950', label: 'Hazard', emoji: '⚠️' },
@@ -268,5 +267,5 @@ export function MapView({
     });
   }, [incidents, onIncidentClick]);
 
-  return <div ref={mapContainerRef} className="w-full h-full" />;
+  return <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />;
 }

@@ -1,10 +1,20 @@
 import type { RouteInfo, RouteStep, ManeuverType } from '../types/navigation';
 
 /**
- * Parses raw OSRM route response into structured RouteInfo
+ * Parses raw OSRM route response into structured RouteInfo with Toll Detection
  */
-export function parseOSRMRoute(osrmRoute: any, profile: 'driving' | 'bike' | 'foot' = 'driving'): RouteInfo {
+export function parseOSRMRoute(
+  osrmRoute: any,
+  profile: 'driving' | 'bike' | 'foot' = 'driving',
+  index: number = 0
+): RouteInfo {
   const steps: RouteStep[] = [];
+  let detectedToll = false;
+
+  const tollKeywords = [
+    'toll', 'tol', 'lebuhraya', 'expressway', 'highway', 'plaza tol', 'e1', 'e2', 'e11',
+    'plus', 'mex', 'duke', 'ldp', 'kesas', 'smart', 'spe', 'npe', 'sprint', 'guthrie', 'silk'
+  ];
 
   if (osrmRoute.legs && osrmRoute.legs.length > 0) {
     for (const leg of osrmRoute.legs) {
@@ -14,6 +24,11 @@ export function parseOSRMRoute(osrmRoute: any, profile: 'driving' | 'bike' | 'fo
           const type = mapOSRMType(maneuver.type, maneuver.modifier);
           const name = step.name || 'Unnamed Road';
           const instruction = generateInstruction(type, maneuver.modifier, name);
+
+          const lowerName = name.toLowerCase();
+          if (tollKeywords.some((k) => lowerName.includes(k))) {
+            detectedToll = true;
+          }
 
           steps.push({
             distance: step.distance || 0,
@@ -29,13 +44,32 @@ export function parseOSRMRoute(osrmRoute: any, profile: 'driving' | 'bike' | 'fo
     }
   }
 
+  const summary = osrmRoute.legs?.[0]?.summary || (index === 0 ? 'Fastest route' : `Via ${steps[1]?.name || 'Alternative'}`);
+  const label = index === 0 ? 'Fastest' : index === 1 ? 'Alternative 1' : `Alternative ${index}`;
+
+  let tollFareEstimate = 'Free';
+  if (profile === 'driving' && detectedToll) {
+    const distKm = (osrmRoute.distance || 0) / 1000;
+    if (distKm > 30) {
+      tollFareEstimate = '~RM 4.80';
+    } else if (distKm > 15) {
+      tollFareEstimate = '~RM 2.50';
+    } else {
+      tollFareEstimate = '~RM 1.60';
+    }
+  }
+
   return {
+    id: `route-${index}-${Date.now()}`,
     distance: Math.round(osrmRoute.distance || 0),
     duration: Math.round(osrmRoute.duration || 0),
     geometry: osrmRoute.geometry,
     steps,
-    summary: osrmRoute.legs?.[0]?.summary || 'Fastest route',
+    summary,
     profile,
+    hasTolls: profile === 'driving' ? detectedToll : false,
+    tollFareEstimate: profile === 'driving' && detectedToll ? tollFareEstimate : 'Free',
+    label,
   };
 }
 

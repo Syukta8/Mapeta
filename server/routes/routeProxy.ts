@@ -2,17 +2,22 @@ import { Router } from 'express';
 
 export const routeRouter = Router();
 
-// GET /api/route?start=lng,lat&end=lng,lat&profile=driving|bike|foot&alternatives=true
+// GET /api/route?start=lng,lat&end=lng,lat&profile=driving|bike|foot&alternatives=true&avoidTolls=true
 routeRouter.get('/', async (req, res) => {
   try {
-    const { start, end, profile = 'driving', alternatives = 'true' } = req.query;
+    const { start, end, profile = 'driving', alternatives = 'true', avoidTolls = 'false' } = req.query;
 
     if (!start || !end) {
       return res.status(400).json({ success: false, error: 'Start and end coordinates required (format: lng,lat)' });
     }
 
     const mode = profile === 'bike' ? 'bike' : profile === 'foot' ? 'foot' : 'driving';
-    const osrmUrl = `https://routing.openstreetmap.de/routed-${mode}/route/v1/${mode}/${start};${end}?overview=full&geometries=geojson&steps=true&annotations=true&alternatives=${alternatives}`;
+    let excludeParam = '';
+    if (avoidTolls === 'true' && mode === 'driving') {
+      excludeParam = '&exclude=toll';
+    }
+
+    const osrmUrl = `https://routing.openstreetmap.de/routed-${mode}/route/v1/${mode}/${start};${end}?overview=full&geometries=geojson&steps=true&annotations=true&alternatives=${alternatives}${excludeParam}`;
 
     const response = await fetch(osrmUrl, {
       headers: {
@@ -21,7 +26,7 @@ routeRouter.get('/', async (req, res) => {
     });
 
     if (!response.ok) {
-      const fallbackUrl = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&alternatives=${alternatives}`;
+      const fallbackUrl = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&alternatives=${alternatives}${excludeParam}`;
       const fallbackRes = await fetch(fallbackUrl, {
         headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' },
       });

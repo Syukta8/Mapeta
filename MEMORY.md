@@ -27,3 +27,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Added Android PWA manifest, Screen Wake-Lock API, SearchBar autocomplete, security audit, and layman README.md (Commit 47e1eac).
 2026-08-28 — Configured Git remote origin: https://github.com/Syukta8/Mapeta.git.
 2026-08-28 — Removed Tailscale and configured Cloudflare Tunnel.
+2026-08-28 — Implemented smooth Map Dragging & Pan gestures, Toll Fare options (Avoid Tolls toggle), and Multi-Route Alternative Selection cards and interactive polyline switching.
