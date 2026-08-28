@@ -3,11 +3,13 @@ import { Navigation, Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square,
 import { MapView } from './components/Map/MapView';
 import { NavigationHUD } from './components/Navigation/NavigationHUD';
 import { RouteSummary } from './components/UI/RouteSummary';
+import { SearchBar } from './components/Search/SearchBar';
 import { ReportModal } from './components/Incidents/ReportModal';
 import { IncidentDetails } from './components/Incidents/IncidentDetails';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useOrientation } from './hooks/useOrientation';
 import { useNavigation } from './hooks/useNavigation';
+import { useWakeLock } from './hooks/useWakeLock';
 import { useIncidentSocket } from './hooks/useIncidentSocket';
 import { parseOSRMRoute } from './utils/routeUtils';
 import type { Incident, RouteInfo } from './types/navigation';
@@ -28,6 +30,9 @@ export default function App() {
 
   // Live WebSocket incident connection
   const { isConnected, incidents, reportIncident, voteIncident } = useIncidentSocket();
+
+  // Screen wake lock while actively driving in navigation mode
+  useWakeLock(isNavigating);
 
   // High accuracy GPS & Speedometer
   const geo = useGeolocation(true);
@@ -91,6 +96,14 @@ export default function App() {
     const startLat = userCoords ? userCoords.latitude : 3.1408;
     calculateRoute([startLng, startLat], coords, selectedProfile);
   }, [isNavigating, userCoords, selectedProfile, calculateRoute]);
+
+  // Handle search bar selection
+  const handleSearchSelect = (coords: [number, number]) => {
+    setDestination(coords);
+    const startLng = userCoords ? userCoords.longitude : 101.6932;
+    const startLat = userCoords ? userCoords.latitude : 3.1408;
+    calculateRoute([startLng, startLat], coords, selectedProfile);
+  };
 
   // Profile switch
   const handleSelectProfile = (profile: 'driving' | 'bike' | 'foot') => {
@@ -171,25 +184,43 @@ export default function App() {
 
   return (
     <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'night' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Top App Header (Hidden during active HUD navigation for clean view) */}
+      {/* Top App Header & Search Bar (Hidden during active HUD navigation) */}
       {!isNavigating && (
-        <header className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-800 px-4 py-2 rounded-2xl shadow-2xl pointer-events-auto">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-md">
-              <Navigation className="w-5 h-5 fill-current" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-bold tracking-wide text-white leading-none">Mapeta</h1>
-                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+        <header className="absolute top-3 left-3 right-3 z-30 flex flex-col sm:flex-row items-center justify-between gap-2.5 pointer-events-none">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2.5 pointer-events-auto">
+            <div className="flex items-center gap-2.5 bg-slate-900/95 backdrop-blur-2xl border border-slate-800 px-3.5 py-2 rounded-2xl shadow-2xl">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-md">
+                <Navigation className="w-5 h-5 fill-current" />
               </div>
-              <span className="text-[10px] text-sky-400 font-medium">
-                {isConnected ? 'Live Sync' : 'Reconnecting...'}
-              </span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-sm font-bold tracking-wide text-white leading-none">Mapeta</h1>
+                  <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                </div>
+                <span className="text-[10px] text-sky-400 font-medium">
+                  {isConnected ? 'Live Sync' : 'Reconnecting...'}
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile quick theme toggle */}
+            <div className="flex sm:hidden items-center gap-1.5">
+              <button
+                onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
+                className="p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-slate-800 text-slate-300 hover:text-sky-400 shadow-xl transition-colors"
+              >
+                {theme === 'night' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Center Search Bar */}
+          <div className="w-full sm:w-80 flex-1 max-w-sm">
+            <SearchBar onSelectResult={handleSearchSelect} />
+          </div>
+
+          {/* Desktop Right Header Alerts & Theme Controls */}
+          <div className="hidden sm:flex items-center gap-2 pointer-events-auto">
             {incidents.length > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold backdrop-blur-md shadow-xl">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
@@ -198,7 +229,7 @@ export default function App() {
             )}
             <button
               onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
-              className="p-2.5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-slate-300 hover:text-sky-400 shadow-xl transition-colors"
+              className="p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-slate-800 text-slate-300 hover:text-sky-400 shadow-xl transition-colors"
               title="Toggle Day/Night Mode"
             >
               {theme === 'night' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
