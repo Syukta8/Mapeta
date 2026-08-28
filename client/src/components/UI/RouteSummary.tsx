@@ -25,7 +25,6 @@ export function RouteSummary({
 }: RouteSummaryProps) {
   const [sortFilter, setSortFilter] = useState<SortFilter>('fastest');
 
-  // Sorted Route Options Matrix based on active filter
   const sortedRoutes = useMemo(() => {
     const list = [...allRoutes];
     if (sortFilter === 'fastest') {
@@ -69,16 +68,16 @@ export function RouteSummary({
 
   return (
     <div className="absolute bottom-3 left-3 right-3 z-40 max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-6 duration-300">
-      <div className="glass-genshin rounded-2xl p-4 shadow-2xl flex flex-col gap-3.5 border border-[#d3bc8e]/40">
+      <div className="pixel-card rounded-3xl p-4 shadow-2xl flex flex-col gap-3.5 border border-white/10">
         {/* Top Profile Picker & Close Button */}
-        <div className="flex items-center justify-between border-b border-[#d3bc8e]/20 pb-3">
-          <div className="flex items-center gap-1.5 p-1 bg-[#0c1322]/80 border border-[#d3bc8e]/30 rounded-xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-1.5 p-1 bg-[#212226] border border-white/5 rounded-2xl">
             <button
               onClick={() => onSelectProfile('driving')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                 selectedProfile === 'driving'
-                  ? 'bg-gradient-to-r from-[#d3bc8e] to-[#bfa175] text-[#0c1322] shadow-md'
-                  : 'text-[#ede8db]/70 hover:text-[#f7f4ee]'
+                  ? 'bg-[#a8c7fa] text-[#042f66] shadow-sm'
+                  : 'text-[#e3e2e6]/70 hover:text-white'
               }`}
             >
               <Car className="w-3.5 h-3.5" />
@@ -86,10 +85,10 @@ export function RouteSummary({
             </button>
             <button
               onClick={() => onSelectProfile('bike')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                 selectedProfile === 'bike'
-                  ? 'bg-gradient-to-r from-[#d3bc8e] to-[#bfa175] text-[#0c1322] shadow-md'
-                  : 'text-[#ede8db]/70 hover:text-[#f7f4ee]'
+                  ? 'bg-[#a8c7fa] text-[#042f66] shadow-sm'
+                  : 'text-[#e3e2e6]/70 hover:text-white'
               }`}
             >
               <Bike className="w-3.5 h-3.5" />
@@ -97,10 +96,10 @@ export function RouteSummary({
             </button>
             <button
               onClick={() => onSelectProfile('foot')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                 selectedProfile === 'foot'
-                  ? 'bg-gradient-to-r from-[#d3bc8e] to-[#bfa175] text-[#0c1322] shadow-md'
-                  : 'text-[#ede8db]/70 hover:text-[#f7f4ee]'
+                  ? 'bg-[#a8c7fa] text-[#042f66] shadow-sm'
+                  : 'text-[#e3e2e6]/70 hover:text-white'
               }`}
             >
               <Footprints className="w-3.5 h-3.5" />
@@ -110,7 +109,7 @@ export function RouteSummary({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-[#0c1322]/80 text-[#ede8db]/70 hover:text-[#f7f4ee] border border-[#d3bc8e]/20 hover:border-[#d3bc8e]/40 transition-colors"
+            className="p-2 rounded-full bg-[#212226] text-slate-400 hover:text-white border border-white/5 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -118,17 +117,17 @@ export function RouteSummary({
 
         {/* Dynamic Route Sorting Matrix Tabs (Drive mode) */}
         {selectedProfile === 'driving' && allRoutes.length > 1 && (
-          <div className="flex items-center gap-1.5 p-1 bg-[#0c1322]/60 border border-[#d3bc8e]/20 rounded-xl">
+          <div className="flex items-center gap-1.5 p-1 bg-[#212226]/80 border border-white/5 rounded-2xl">
             <button
               onClick={() => {
                 setSortFilter('fastest');
                 const bestIdx = allRoutes.findIndex((r) => r.id === sortedRoutes[0]?.id);
                 if (bestIdx >= 0) onSelectRouteIndex(bestIdx);
               }}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold font-cinzel transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 sortFilter === 'fastest'
-                  ? 'bg-[#d3bc8e]/20 text-[#d3bc8e] border border-[#d3bc8e]/50 shadow-sm'
-                  : 'text-[#ede8db]/60 hover:text-[#ede8db]'
+                  ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border border-[#a8c7fa]/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <Clock className="w-3 h-3" />
@@ -140,10 +139,10 @@ export function RouteSummary({
                 const bestIdx = allRoutes.findIndex((r) => r.id === sortedRoutes[0]?.id);
                 if (bestIdx >= 0) onSelectRouteIndex(bestIdx);
               }}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold font-cinzel transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 sortFilter === 'toll'
-                  ? 'bg-[#d3bc8e]/20 text-[#d3bc8e] border border-[#d3bc8e]/50 shadow-sm'
-                  : 'text-[#ede8db]/60 hover:text-[#ede8db]'
+                  ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border border-[#a8c7fa]/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <DollarSign className="w-3 h-3" />
@@ -155,10 +154,10 @@ export function RouteSummary({
                 const bestIdx = allRoutes.findIndex((r) => r.id === sortedRoutes[0]?.id);
                 if (bestIdx >= 0) onSelectRouteIndex(bestIdx);
               }}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold font-cinzel transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 sortFilter === 'traffic'
-                  ? 'bg-[#d3bc8e]/20 text-[#d3bc8e] border border-[#d3bc8e]/50 shadow-sm'
-                  : 'text-[#ede8db]/60 hover:text-[#ede8db]'
+                  ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border border-[#a8c7fa]/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <ShieldAlert className="w-3 h-3" />
@@ -179,33 +178,33 @@ export function RouteSummary({
                 <button
                   key={idx}
                   onClick={() => onSelectRouteIndex(idx)}
-                  className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                  className={`p-3 rounded-2xl border text-left flex flex-col gap-1 transition-all ${
                     isSelected
-                      ? 'bg-[#d3bc8e]/15 border-[#d3bc8e] shadow-md shadow-[#d3bc8e]/10'
-                      : 'bg-[#0c1322]/60 border-[#d3bc8e]/20 hover:border-[#d3bc8e]/40 opacity-80'
+                      ? 'bg-[#a8c7fa]/20 border-[#a8c7fa] shadow-md shadow-[#a8c7fa]/10'
+                      : 'bg-[#212226]/80 border-white/5 hover:border-white/20 opacity-85'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-cinzel font-bold ${isSelected ? 'text-[#d3bc8e]' : 'text-slate-400'}`}>
-                      {diffSec === 0 ? '✦ FASTEST' : `✦ OPTION ${idx + 1}`}
+                    <span className={`text-[11px] font-bold ${isSelected ? 'text-[#a8c7fa]' : 'text-slate-400'}`}>
+                      {diffSec === 0 ? 'Best Route' : `Option ${idx + 1}`}
                     </span>
-                    {isSelected && <Check className="w-3 h-3 text-[#d3bc8e]" />}
+                    {isSelected && <Check className="w-3 h-3 text-[#a8c7fa]" />}
                   </div>
 
                   <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-extrabold text-[#f7f4ee] font-cinzel">{formatDuration(r.duration)}</span>
+                    <span className="text-base font-extrabold text-white">{formatDuration(r.duration)}</span>
                     {diffSec > 0 && (
                       <span className="text-[10px] text-amber-400">+{Math.round(diffSec / 60)}m</span>
                     )}
                   </div>
 
                   {/* Toll & Traffic Badges */}
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className={`font-semibold ${r.hasTolls ? 'text-amber-400' : 'text-[#5ce1e6]'}`}>
+                  <div className="flex items-center justify-between text-[10px] mt-0.5">
+                    <span className={`font-semibold ${r.hasTolls ? 'text-amber-300' : 'text-emerald-400'}`}>
                       {r.hasTolls ? r.tollFareEstimate : 'Toll-free'}
                     </span>
                     {r.trafficDelaySec > 0 ? (
-                      <span className="text-[9px] text-rose-400 font-bold">+{Math.round(r.trafficDelaySec / 60)}m jam</span>
+                      <span className="text-[9px] text-red-400 font-bold">+{Math.round(r.trafficDelaySec / 60)}m jam</span>
                     ) : (
                       <span className="text-[9px] text-emerald-400 font-bold">🟢 Clear</span>
                     )}
@@ -221,37 +220,37 @@ export function RouteSummary({
           <div className="flex items-center justify-between pt-1">
             <div className="flex flex-col">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#f7f4ee] font-cinzel leading-none">
+                <span className="text-3xl font-black text-white leading-none">
                   {formatDuration(activeRoute.duration)}
                 </span>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                   activeRoute.hasTolls
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-[#5ce1e6]/20 text-[#5ce1e6] border-[#5ce1e6]/40'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 }`}>
-                  {activeRoute.hasTolls ? `Toll: ${activeRoute.tollFareEstimate}` : 'Toll-Free ✦'}
+                  {activeRoute.hasTolls ? `Toll: ${activeRoute.tollFareEstimate}` : 'Toll-Free'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs font-medium text-[#ede8db]/70 mt-1">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
                 <span>{formatDist(activeRoute.distance)}</span>
                 <span>•</span>
                 <span>Arrive at {arrivalTime(activeRoute.duration)}</span>
                 {activeRoute.trafficDelaySec > 0 && (
                   <>
                     <span>•</span>
-                    <span className="text-amber-400 font-bold">Includes +{Math.round(activeRoute.trafficDelaySec / 60)}m traffic delay</span>
+                    <span className="text-amber-400 font-bold">+{Math.round(activeRoute.trafficDelaySec / 60)}m jam</span>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Golden Start Journey Button */}
+            {/* Pixel Blue Start Navigation Button */}
             <button
               onClick={onStartNavigation}
-              className="gold-btn flex items-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm active:scale-95 transition-all shrink-0"
+              className="pixel-btn-primary flex items-center gap-2 px-6 py-3.5 rounded-2xl active:scale-95 transition-all shrink-0"
             >
               <Navigation2 className="w-4 h-4 fill-current" />
-              <span className="font-cinzel tracking-wider">NAVIGATE</span>
+              <span className="tracking-wide">Start</span>
             </button>
           </div>
         )}

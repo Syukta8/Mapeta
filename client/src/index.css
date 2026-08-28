@@ -3,12 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --genshin-gold: #d3bc8e;
-  --genshin-gold-hover: #e6d2a8;
-  --genshin-dark: #0c1322;
-  --genshin-card: #11192b;
-  --genshin-primogem: #5ce1e6;
-  --genshin-parchment: #ede8db;
+  --pixel-bg: #121316;
+  --pixel-surface: #1b1c20;
+  --pixel-surface-container: #212226;
+  --pixel-surface-high: #2b2c31;
+  --pixel-primary: #a8c7fa;
+  --pixel-on-primary: #042f66;
+  --pixel-secondary: #c2c7ce;
+  --pixel-tertiary: #6dd58c;
+  --pixel-outline: #44474e;
 }
 
 html, body, #root {
@@ -17,26 +20,23 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-.font-cinzel {
-  font-family: 'Cinzel', serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #121316;
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(12, 19, 34, 0.7);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(211, 188, 142, 0.4);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(211, 188, 142, 0.8);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .maplibregl-ctrl-bottom-right,
@@ -44,37 +44,39 @@ html, body, #root {
   z-index: 10 !important;
 }
 
-@keyframes celestial-pulse {
-  0% { transform: scale(0.92); opacity: 0.9; box-shadow: 0 0 0 0 rgba(211, 188, 142, 0.5); }
-  50% { transform: scale(1.35); opacity: 0.15; box-shadow: 0 0 20px 10px rgba(92, 225, 230, 0.3); }
-  100% { transform: scale(0.92); opacity: 0.9; box-shadow: 0 0 0 0 rgba(211, 188, 142, 0.5); }
+.pixel-card {
+  background: rgba(27, 28, 32, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
-.celestial-pos-pulse {
-  animation: celestial-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.glass-genshin {
-  background: rgba(17, 25, 43, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(211, 188, 142, 0.32);
-}
-
-.glass-genshin-subtle {
-  background: rgba(12, 19, 34, 0.75);
+.pixel-card-subtle {
+  background: rgba(33, 34, 38, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(211, 188, 142, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.gold-btn {
-  background: linear-gradient(135deg, #d3bc8e 0%, #bfa175 100%);
-  color: #0c1322;
-  box-shadow: 0 4px 18px -2px rgba(211, 188, 142, 0.35);
+.pixel-btn-primary {
+  background: #a8c7fa;
+  color: #042f66;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(168, 199, 250, 0.3);
 }
 
-.gold-btn:hover {
-  background: linear-gradient(135deg, #e6d2a8 0%, #d3bc8e 100%);
-  box-shadow: 0 6px 24px -2px rgba(211, 188, 142, 0.5);
+.pixel-btn-primary:hover {
+  background: #c3d9fb;
+  box-shadow: 0 6px 20px rgba(168, 199, 250, 0.45);
+}
+
+@keyframes pixel-pulse {
+  0% { transform: scale(0.95); opacity: 0.9; box-shadow: 0 0 0 0 rgba(168, 199, 250, 0.6); }
+  50% { transform: scale(1.35); opacity: 0.2; box-shadow: 0 0 20px 8px rgba(168, 199, 250, 0.4); }
+  100% { transform: scale(0.95); opacity: 0.9; box-shadow: 0 0 0 0 rgba(168, 199, 250, 0.6); }
+}
+
+.pixel-pos-pulse {
+  animation: pixel-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

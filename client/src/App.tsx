@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Sparkles } from 'lucide-react';
+import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Navigation } from 'lucide-react';
 import { MapView } from './components/Map/MapView';
 import { NavigationHUD } from './components/Navigation/NavigationHUD';
 import { RouteSummary } from './components/UI/RouteSummary';
@@ -174,29 +174,26 @@ export default function App() {
   }, []);
 
   return (
-    <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'night' ? 'dark bg-[#0c1322] text-[#ede8db]' : 'bg-[#f7f4ee] text-[#0c1322]'}`}>
+    <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'night' ? 'dark bg-[#121316] text-[#e3e2e6]' : 'bg-[#fdfcff] text-[#121316]'}`}>
       {!isNavigating && (
         <header className="absolute top-3 left-3 right-3 z-30 flex flex-col sm:flex-row items-center justify-between gap-2.5 pointer-events-none">
           <div className="flex items-center justify-between w-full sm:w-auto gap-2.5 pointer-events-auto">
-            <div className="glass-genshin px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-[#d3bc8e]/40">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d3bc8e] to-[#94784a] flex items-center justify-center text-[#0c1322] shadow-md">
-                <Sparkles className="w-4 h-4 fill-current" />
+            <div className="pixel-card px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/10">
+              <div className="w-6 h-6 rounded-full bg-[#0b57d0] flex items-center justify-center text-white shadow-sm">
+                <Navigation className="w-3.5 h-3.5 fill-current" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm font-bold tracking-wider text-[#f7f4ee] font-cinzel leading-none">Mapeta</h1>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#5ce1e6] animate-pulse' : 'bg-rose-500'}`}></span>
+                  <h1 className="text-sm font-bold tracking-tight text-white leading-none">Mapeta</h1>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#6dd58c] animate-pulse' : 'bg-red-500'}`}></span>
                 </div>
-                <span className="text-[9px] text-[#d3bc8e] font-semibold tracking-wide uppercase">
-                  {isConnected ? '✦ Teyvat Live' : 'Offline'}
-                </span>
               </div>
             </div>
 
             <div className="flex sm:hidden items-center gap-1.5">
               <button
                 onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
-                className="glass-genshin p-2 rounded-xl text-[#d3bc8e] border border-[#d3bc8e]/30 shadow-xl transition-colors"
+                className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 shadow-xl transition-colors"
               >
                 {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
@@ -209,14 +206,14 @@ export default function App() {
 
           <div className="hidden sm:flex items-center gap-2 pointer-events-auto">
             {incidents.length > 0 && (
-              <div className="glass-genshin flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-300 text-xs font-semibold shadow-xl">
+              <div className="pixel-card flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-xl">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span>{incidents.length} alert{incidents.length > 1 ? 's' : ''}</span>
               </div>
             )}
             <button
               onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
-              className="glass-genshin p-2.5 rounded-xl text-[#d3bc8e] border border-[#d3bc8e]/30 hover:border-[#d3bc8e] shadow-xl transition-colors"
+              className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 hover:border-[#a8c7fa]/40 shadow-xl transition-colors"
               title="Toggle Day/Night Mode"
             >
               {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -225,10 +222,11 @@ export default function App() {
         </header>
       )}
 
-      <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2">
+      {/* Floating Action Buttons */}
+      <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2.5">
         <button
           onClick={() => setIsReportModalOpen(true)}
-          className="gold-btn p-3 rounded-2xl shadow-2xl active:scale-95 transition-all border border-[#f7f4ee]/50"
+          className="pixel-btn-primary p-3.5 rounded-full shadow-2xl active:scale-95 transition-all"
           title="Report Hazard / Incident"
         >
           <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -237,10 +235,10 @@ export default function App() {
         {activeRoute && (
           <button
             onClick={isSimulatingDrive ? stopDriveSimulation : startDriveSimulation}
-            className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
+            className={`pixel-card p-3 rounded-full shadow-2xl transition-all border ${
               isSimulatingDrive
                 ? 'bg-amber-500/30 text-amber-300 border-amber-400 animate-pulse'
-                : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#d3bc8e]'
+                : 'text-white border-white/10 hover:text-[#a8c7fa]'
             }`}
             title={isSimulatingDrive ? 'Stop Drive Simulation' : 'Simulate GPS Drive'}
           >
@@ -250,10 +248,10 @@ export default function App() {
 
         <button
           onClick={() => setFollowUser(!followUser)}
-          className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
+          className={`pixel-card p-3 rounded-full shadow-2xl transition-all border ${
             followUser
-              ? 'bg-[#d3bc8e]/20 text-[#d3bc8e] border-[#d3bc8e]'
-              : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#d3bc8e]'
+              ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]'
+              : 'text-white border-white/10 hover:text-[#a8c7fa]'
           }`}
           title="Recenter Camera"
         >
@@ -262,10 +260,10 @@ export default function App() {
 
         <button
           onClick={() => setIsNavigating(!isNavigating)}
-          className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
+          className={`pixel-card p-3 rounded-full shadow-2xl transition-all border ${
             isNavigating
-              ? 'bg-[#5ce1e6]/20 text-[#5ce1e6] border-[#5ce1e6]'
-              : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#5ce1e6]'
+              ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]'
+              : 'text-white border-white/10 hover:text-[#a8c7fa]'
           }`}
           title="Toggle 3D Perspective"
         >
@@ -281,6 +279,9 @@ export default function App() {
           remainingDistance={nav.remainingDistance}
           remainingDuration={nav.remainingDuration}
           currentSpeedKmh={currentSpeed}
+          allRoutes={allRoutes}
+          selectedRouteIndex={selectedRouteIndex}
+          onSelectRouteIndex={(idx) => setSelectedRouteIndex(idx)}
           onStopNavigation={handleStopNavigation}
         />
       )}

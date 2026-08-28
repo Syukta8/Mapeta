@@ -8,22 +8,31 @@ export function processMultiRoutes(
   profile: 'driving' | 'bike' | 'foot',
   incidents: Incident[] = []
 ): RouteInfo[] {
-  const seenGeometries = new Set<string>();
   const parsedRoutes: RouteInfo[] = [];
 
+  const tollKeywords = [
+    'toll', 'tol', 'lebuhraya', 'expressway', 'highway', 'plaza tol', 'e1', 'e2', 'e11',
+    'plus', 'mex', 'duke', 'ldp', 'kesas', 'smart', 'spe', 'npe', 'sprint', 'guthrie', 'silk'
+  ];
+
   rawRoutes.forEach((osrmRoute, index) => {
-    // Deduplicate identical paths (same start, length, and step count)
-    const geomKey = `${Math.round(osrmRoute.distance)}_${Math.round(osrmRoute.duration)}_${osrmRoute.geometry?.coordinates?.length}`;
-    if (seenGeometries.has(geomKey)) return;
-    seenGeometries.add(geomKey);
+    const rawDistance = Math.round(osrmRoute.distance || 0);
+    const rawDuration = Math.round(osrmRoute.duration || 0);
+    const coords = osrmRoute.geometry?.coordinates || [];
+
+    if (coords.length === 0) return;
+
+    // Check if this route is substantially distinct from already collected routes (distance diff > 500m or duration diff > 60s)
+    const isDuplicate = parsedRoutes.some((existing) => {
+      const distDiff = Math.abs(existing.distance - rawDistance);
+      const timeDiff = Math.abs(existing.rawDuration - rawDuration);
+      return distDiff < 600 && timeDiff < 90;
+    });
+
+    if (isDuplicate) return;
 
     const steps: RouteStep[] = [];
     let detectedToll = false;
-
-    const tollKeywords = [
-      'toll', 'tol', 'lebuhraya', 'expressway', 'highway', 'plaza tol', 'e1', 'e2', 'e11',
-      'plus', 'mex', 'duke', 'ldp', 'kesas', 'smart', 'spe', 'npe', 'sprint', 'guthrie', 'silk'
-    ];
 
     if (osrmRoute.legs && osrmRoute.legs.length > 0) {
       for (const leg of osrmRoute.legs) {
@@ -53,18 +62,13 @@ export function processMultiRoutes(
       }
     }
 
-    const rawDistance = Math.round(osrmRoute.distance || 0);
-    const rawDuration = Math.round(osrmRoute.duration || 0);
-
-    // Calculate traffic delay penalties by checking proximity of incidents to route polyline
-    const coords = osrmRoute.geometry?.coordinates || [];
+    // Traffic congestion penalty calculation
     let trafficDelaySec = 0;
     let incidentCount = 0;
     let hasHeavyJam = false;
 
     if (coords.length > 0 && incidents.length > 0) {
       incidents.forEach((inc) => {
-        // Simple distance check: is incident within ~250m of any route segment
         const isNearRoute = coords.some((c: [number, number]) => {
           const dLng = Math.abs(c[0] - inc.lng);
           const dLat = Math.abs(c[1] - inc.lat);
@@ -74,13 +78,13 @@ export function processMultiRoutes(
         if (isNearRoute) {
           incidentCount += 1;
           if (inc.type === 'jam') {
-            trafficDelaySec += 360 + Math.min(inc.upvotes * 60, 600); // 6-16 min delay per jam
+            trafficDelaySec += 360 + Math.min(inc.upvotes * 60, 600); // 6 to 16 min delay
             hasHeavyJam = true;
           } else if (inc.type === 'accident' || inc.type === 'closure') {
-            trafficDelaySec += 300; // 5 min delay
+            trafficDelaySec += 300;
             hasHeavyJam = true;
           } else {
-            trafficDelaySec += 90; // 1.5 min delay for hazard/police
+            trafficDelaySec += 90;
           }
         }
       });
@@ -105,8 +109,8 @@ export function processMultiRoutes(
       }
     }
 
-    const summary = osrmRoute.legs?.[0]?.summary || `Via ${steps[1]?.name || 'Expressway'}`;
-    const label = detectedToll ? 'Expressway' : 'Toll-Free Route';
+    const summary = osrmRoute.legs?.[0]?.summary || `Via ${steps[1]?.name || 'Highway'}`;
+    const label = detectedToll ? 'Expressway (Toll)' : 'Federal / Trunk Road';
 
     parsedRoutes.push({
       id: `route-${index}-${Date.now()}`,
@@ -126,7 +130,8 @@ export function processMultiRoutes(
     });
   });
 
-  return parsedRoutes;
+  // Sort initially by duration
+  return parsedRoutes.sort((a, b) => a.duration - b.duration);
 }
 
 function mapOSRMType(type: string, modifier?: string): ManeuverType {

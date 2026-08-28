@@ -96,9 +96,9 @@ export function MapView({
       const el = document.createElement('div');
       el.className = 'relative flex items-center justify-center w-12 h-12 pointer-events-none';
       el.innerHTML = `
-        <div class="celestial-pos-pulse absolute w-12 h-12 rounded-full bg-[#d3bc8e]/40"></div>
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#d3bc8e] to-[#94784a] border-2 border-[#f7f4ee] shadow-2xl flex items-center justify-center z-10">
-          <svg id="marker-arrow" class="w-5 h-5 text-[#0c1322] transition-transform duration-300" viewBox="0 0 24 24" fill="currentColor">
+        <div class="pixel-pos-pulse absolute w-12 h-12 rounded-full bg-[#a8c7fa]/30"></div>
+        <div class="w-8 h-8 rounded-full bg-[#0b57d0] border-2 border-white shadow-2xl flex items-center justify-center z-10">
+          <svg id="marker-arrow" class="w-4 h-4 text-white transition-transform duration-300" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
           </svg>
         </div>
@@ -131,7 +131,7 @@ export function MapView({
     if (!map) return;
 
     const renderRoutes = () => {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         if (map.getLayer(`route-casing-${i}`)) map.removeLayer(`route-casing-${i}`);
         if (map.getLayer(`route-line-${i}`)) map.removeLayer(`route-line-${i}`);
         if (map.getSource(`route-source-${i}`)) map.removeSource(`route-source-${i}`);
@@ -165,7 +165,7 @@ export function MapView({
             'line-cap': 'round',
           },
           paint: {
-            'line-color': isSelected ? '#d3bc8e' : '#1e293b',
+            'line-color': isSelected ? '#042f66' : '#1b1c20',
             'line-width': isSelected ? 8 : 5,
             'line-opacity': isSelected ? 0.9 : 0.6,
           },
@@ -180,9 +180,9 @@ export function MapView({
             'line-cap': 'round',
           },
           paint: {
-            'line-color': isSelected ? '#5ce1e6' : '#64748b',
+            'line-color': isSelected ? '#a8c7fa' : '#64748b',
             'line-width': isSelected ? 5 : 3.5,
-            'line-opacity': isSelected ? 1 : 0.7,
+            'line-opacity': isSelected ? 1 : 0.75,
           },
         });
 
@@ -218,11 +218,11 @@ export function MapView({
     incidentMarkersRef.current.clear();
 
     const iconColors: Record<string, { bg: string; text: string; emoji: string }> = {
-      police: { bg: 'bg-gradient-to-br from-[#d3bc8e] to-[#94784a]', text: 'text-[#0c1322]', emoji: '👮' },
-      hazard: { bg: 'bg-gradient-to-br from-amber-500 to-amber-700', text: 'text-white', emoji: '⚠️' },
-      jam: { bg: 'bg-gradient-to-br from-rose-600 to-rose-800', text: 'text-white', emoji: '🚗' },
-      closure: { bg: 'bg-gradient-to-br from-purple-600 to-purple-800', text: 'text-white', emoji: '🚧' },
-      accident: { bg: 'bg-gradient-to-br from-orange-500 to-orange-700', text: 'text-white', emoji: '💥' },
+      police: { bg: 'bg-[#0b57d0]', text: 'text-white', emoji: '👮' },
+      hazard: { bg: 'bg-amber-500', text: 'text-white', emoji: '⚠️' },
+      jam: { bg: 'bg-red-500', text: 'text-white', emoji: '🚗' },
+      closure: { bg: 'bg-purple-600', text: 'text-white', emoji: '🚧' },
+      accident: { bg: 'bg-orange-600', text: 'text-white', emoji: '💥' },
     };
 
     incidents.forEach((inc) => {
@@ -230,10 +230,10 @@ export function MapView({
       const el = document.createElement('div');
       el.className = 'cursor-pointer group flex flex-col items-center';
       el.innerHTML = `
-        <div class="w-8 h-8 rounded-xl ${config.bg} ${config.text} border-2 border-[#f7f4ee] shadow-2xl flex items-center justify-center text-sm font-bold transform transition-transform group-hover:scale-125">
+        <div class="w-8 h-8 rounded-full ${config.bg} ${config.text} border-2 border-white shadow-xl flex items-center justify-center text-sm font-bold transform transition-transform group-hover:scale-125">
           ${config.emoji}
         </div>
-        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-[#0c1322]/95 text-[#f7f4ee] text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-[#d3bc8e]/40 mt-1 shadow-lg pointer-events-none whitespace-nowrap font-cinzel">
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-[#1b1c20] text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/10 mt-1 shadow-lg pointer-events-none whitespace-nowrap">
           ${inc.title}
         </div>
       `;

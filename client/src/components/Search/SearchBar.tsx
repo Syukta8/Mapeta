@@ -54,19 +54,19 @@ export function SearchBar({ onSelectResult }: SearchBarProps) {
 
   return (
     <div className="relative w-full max-w-sm pointer-events-auto">
-      <div className="glass-genshin flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 shadow-2xl border border-[#d3bc8e]/40 focus-within:border-[#d3bc8e] transition-colors">
+      <div className="pixel-card flex items-center gap-3 rounded-full px-4 py-2.5 shadow-2xl border border-white/10 focus-within:border-[#a8c7fa] transition-colors">
         {isLoading ? (
-          <Loader2 className="w-4 h-4 text-[#d3bc8e] animate-spin shrink-0" />
+          <Loader2 className="w-4 h-4 text-[#a8c7fa] animate-spin shrink-0" />
         ) : (
-          <Search className="w-4 h-4 text-[#d3bc8e] shrink-0" />
+          <Search className="w-4 h-4 text-[#a8c7fa] shrink-0" />
         )}
 
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Where shall we venture today?"
-          className="w-full bg-transparent text-xs text-[#f7f4ee] placeholder-[#ede8db]/40 focus:outline-none"
+          placeholder="Search destination..."
+          className="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
         />
 
         {query && (
@@ -76,30 +76,30 @@ export function SearchBar({ onSelectResult }: SearchBarProps) {
               setResults([]);
               setIsOpen(false);
             }}
-            className="p-1 text-[#d3bc8e]/70 hover:text-[#f7f4ee]"
+            className="p-1 text-slate-400 hover:text-white"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 glass-genshin rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col divide-y divide-[#d3bc8e]/15 max-h-64 overflow-y-auto border border-[#d3bc8e]/40">
+        <div className="absolute top-full left-0 right-0 mt-2 pixel-card rounded-3xl shadow-2xl overflow-hidden z-50 flex flex-col divide-y divide-white/5 max-h-64 overflow-y-auto border border-white/10">
           {results.map((item, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handleSelect(item)}
-              className="flex items-center gap-3 p-3 text-left hover:bg-[#d3bc8e]/10 transition-colors"
+              className="flex items-center gap-3 p-3.5 text-left hover:bg-white/5 transition-colors"
             >
-              <div className="w-6 h-6 rounded-lg bg-[#d3bc8e]/20 border border-[#d3bc8e]/40 flex items-center justify-center shrink-0 text-[#d3bc8e]">
-                <MapPin className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-full bg-[#a8c7fa]/15 flex items-center justify-center shrink-0 text-[#a8c7fa]">
+                <MapPin className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-[#f7f4ee] truncate">
+                <span className="text-sm font-bold text-white truncate">
                   {item.name || item.display_name?.split(',')[0]}
                 </span>
-                <span className="text-[10px] text-[#ede8db]/60 truncate">
+                <span className="text-xs text-slate-400 truncate">
                   {item.display_name}
                 </span>
               </div>
