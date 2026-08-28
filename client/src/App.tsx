@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Navigation, Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus } from 'lucide-react';
+import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Sparkles } from 'lucide-react';
 import { MapView } from './components/Map/MapView';
 import { NavigationHUD } from './components/Navigation/NavigationHUD';
 import { RouteSummary } from './components/UI/RouteSummary';
@@ -25,28 +25,21 @@ export default function App() {
   const [followUser, setFollowUser] = useState<boolean>(true);
   const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
 
-  // Active route is the selected route index
   const activeRoute = allRoutes[selectedRouteIndex] || null;
 
-  // Incident state modals
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
-  // Live WebSocket incident connection
   const { isConnected, incidents, reportIncident, voteIncident } = useIncidentSocket();
 
-  // Screen wake lock while actively driving in navigation mode
   useWakeLock(isNavigating);
 
-  // High accuracy GPS & Speedometer
   const geo = useGeolocation(true);
   const compassHeading = useOrientation();
 
-  // Simulated GPS position when testing navigation
   const [simulatedPos, setSimulatedPos] = useState<{ lat: number; lng: number; heading: number; speedKmh: number } | null>(null);
   const simIntervalRef = useRef<number | null>(null);
 
-  // Active coordinates
   const userCoords = simulatedPos
     ? {
         latitude: simulatedPos.lat,
@@ -63,7 +56,6 @@ export default function App() {
 
   const currentSpeed = simulatedPos ? simulatedPos.speedKmh : geo.speedKmh;
 
-  // Turn-by-turn progression hook
   const nav = useNavigation(
     activeRoute,
     userCoords,
@@ -75,7 +67,6 @@ export default function App() {
     }
   );
 
-  // Calculate route between start and end with multiple alternatives and toll exclusion
   const calculateRoute = useCallback(async (
     start: [number, number],
     end: [number, number],
@@ -96,7 +87,6 @@ export default function App() {
     }
   }, []);
 
-  // Handle map click to pick a destination
   const handleMapClick = useCallback((coords: [number, number]) => {
     if (isNavigating) return;
     setDestination(coords);
@@ -105,7 +95,6 @@ export default function App() {
     calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
   }, [isNavigating, userCoords, selectedProfile, avoidTolls, calculateRoute]);
 
-  // Handle search bar selection
   const handleSearchSelect = (coords: [number, number]) => {
     setDestination(coords);
     const startLng = userCoords ? userCoords.longitude : 101.6932;
@@ -113,7 +102,6 @@ export default function App() {
     calculateRoute([startLng, startLat], coords, selectedProfile, avoidTolls);
   };
 
-  // Profile switch
   const handleSelectProfile = (profile: 'driving' | 'bike' | 'foot') => {
     setSelectedProfile(profile);
     if (destination && userCoords) {
@@ -121,7 +109,6 @@ export default function App() {
     }
   };
 
-  // Toggle Avoid Tolls
   const handleToggleAvoidTolls = () => {
     const nextAvoid = !avoidTolls;
     setAvoidTolls(nextAvoid);
@@ -130,13 +117,11 @@ export default function App() {
     }
   };
 
-  // Start navigation
   const handleStartNavigation = () => {
     setIsNavigating(true);
     setFollowUser(true);
   };
 
-  // Stop navigation
   const handleStopNavigation = () => {
     setIsNavigating(false);
     setAllRoutes([]);
@@ -145,7 +130,6 @@ export default function App() {
     stopDriveSimulation();
   };
 
-  // Simulated driving along the active route coordinates for live demo/testing
   const startDriveSimulation = () => {
     if (!activeRoute || activeRoute.geometry.coordinates.length < 2) return;
 
@@ -200,113 +184,105 @@ export default function App() {
   }, []);
 
   return (
-    <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'night' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Top App Header & Search Bar (Hidden during active HUD navigation) */}
+    <div className={`w-full h-full flex flex-col relative overflow-hidden ${theme === 'night' ? 'dark bg-[#0c1322] text-[#ede8db]' : 'bg-[#f7f4ee] text-[#0c1322]'}`}>
       {!isNavigating && (
         <header className="absolute top-3 left-3 right-3 z-30 flex flex-col sm:flex-row items-center justify-between gap-2.5 pointer-events-none">
           <div className="flex items-center justify-between w-full sm:w-auto gap-2.5 pointer-events-auto">
-            <div className="flex items-center gap-2.5 bg-slate-900/95 backdrop-blur-2xl border border-slate-800 px-3.5 py-2 rounded-2xl shadow-2xl">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-md">
-                <Navigation className="w-5 h-5 fill-current" />
+            <div className="glass-genshin px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-[#d3bc8e]/40">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d3bc8e] to-[#94784a] flex items-center justify-center text-[#0c1322] shadow-md">
+                <Sparkles className="w-4 h-4 fill-current" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm font-bold tracking-wide text-white leading-none">Mapeta</h1>
-                  <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                  <h1 className="text-sm font-bold tracking-wider text-[#f7f4ee] font-cinzel leading-none">Mapeta</h1>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#5ce1e6] animate-pulse' : 'bg-rose-500'}`}></span>
                 </div>
-                <span className="text-[10px] text-sky-400 font-medium">
-                  {isConnected ? 'Live Sync' : 'Reconnecting...'}
+                <span className="text-[9px] text-[#d3bc8e] font-semibold tracking-wide uppercase">
+                  {isConnected ? '✦ Teyvat Live' : 'Offline'}
                 </span>
               </div>
             </div>
 
-            {/* Mobile quick theme toggle */}
             <div className="flex sm:hidden items-center gap-1.5">
               <button
                 onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
-                className="p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-slate-800 text-slate-300 hover:text-sky-400 shadow-xl transition-colors"
+                className="glass-genshin p-2 rounded-xl text-[#d3bc8e] border border-[#d3bc8e]/30 shadow-xl transition-colors"
               >
-                {theme === 'night' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Center Search Bar */}
           <div className="w-full sm:w-80 flex-1 max-w-sm">
             <SearchBar onSelectResult={handleSearchSelect} />
           </div>
 
-          {/* Desktop Right Header Alerts & Theme Controls */}
           <div className="hidden sm:flex items-center gap-2 pointer-events-auto">
             {incidents.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold backdrop-blur-md shadow-xl">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <div className="glass-genshin flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-300 text-xs font-semibold shadow-xl">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span>{incidents.length} alert{incidents.length > 1 ? 's' : ''}</span>
               </div>
             )}
             <button
               onClick={() => setTheme(theme === 'night' ? 'day' : 'night')}
-              className="p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-slate-800 text-slate-300 hover:text-sky-400 shadow-xl transition-colors"
+              className="glass-genshin p-2.5 rounded-xl text-[#d3bc8e] border border-[#d3bc8e]/30 hover:border-[#d3bc8e] shadow-xl transition-colors"
               title="Toggle Day/Night Mode"
             >
-              {theme === 'night' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
           </div>
         </header>
       )}
 
-      {/* Floating Map Action Controls */}
-      <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2.5">
-        {/* Waze-style Quick Report FAB */}
+      <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2">
         <button
           onClick={() => setIsReportModalOpen(true)}
-          className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black shadow-2xl shadow-orange-500/30 border border-amber-300 active:scale-95 transition-all"
+          className="gold-btn p-3 rounded-2xl shadow-2xl active:scale-95 transition-all border border-[#f7f4ee]/50"
           title="Report Hazard / Incident"
         >
-          <Plus className="w-6 h-6 stroke-[3]" />
+          <Plus className="w-5 h-5 stroke-[2.5]" />
         </button>
 
-        {/* Drive Simulation Test button */}
         {activeRoute && (
           <button
             onClick={isSimulatingDrive ? stopDriveSimulation : startDriveSimulation}
-            className={`p-3 rounded-2xl backdrop-blur-md border shadow-2xl transition-all ${
+            className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
               isSimulatingDrive
-                ? 'bg-amber-500 text-white border-amber-400 shadow-amber-500/20 animate-pulse'
-                : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:text-amber-400'
+                ? 'bg-amber-500/30 text-amber-300 border-amber-400 animate-pulse'
+                : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#d3bc8e]'
             }`}
             title={isSimulatingDrive ? 'Stop Drive Simulation' : 'Simulate GPS Drive'}
           >
-            {isSimulatingDrive ? <Square className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+            {isSimulatingDrive ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
           </button>
         )}
 
         <button
           onClick={() => setFollowUser(!followUser)}
-          className={`p-3 rounded-2xl backdrop-blur-md border shadow-2xl transition-all ${
+          className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
             followUser
-              ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/20'
-              : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:text-sky-400'
+              ? 'bg-[#d3bc8e]/20 text-[#d3bc8e] border-[#d3bc8e]'
+              : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#d3bc8e]'
           }`}
-          title="Recenter & Follow Vehicle"
+          title="Recenter Camera"
         >
-          <Crosshair className="w-5 h-5" />
+          <Crosshair className="w-4 h-4" />
         </button>
 
         <button
           onClick={() => setIsNavigating(!isNavigating)}
-          className={`p-3 rounded-2xl backdrop-blur-md border shadow-2xl transition-all ${
+          className={`glass-genshin p-2.5 rounded-2xl shadow-2xl transition-all border ${
             isNavigating
-              ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20'
-              : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:text-emerald-400'
+              ? 'bg-[#5ce1e6]/20 text-[#5ce1e6] border-[#5ce1e6]'
+              : 'text-[#ede8db] border-[#d3bc8e]/30 hover:text-[#5ce1e6]'
           }`}
-          title="Toggle 3D Navigation Perspective"
+          title="Toggle 3D Perspective"
         >
-          <Compass className="w-5 h-5" />
+          <Compass className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Turn-by-Turn Navigation HUD (Active Mode) */}
       {isNavigating && activeRoute && (
         <NavigationHUD
           currentStep={nav.currentStep}
@@ -319,7 +295,6 @@ export default function App() {
         />
       )}
 
-      {/* Pre-Navigation Route Summary Card */}
       {!isNavigating && activeRoute && (
         <RouteSummary
           route={activeRoute}
@@ -339,7 +314,6 @@ export default function App() {
         />
       )}
 
-      {/* Incident Reporting Sheet Modal */}
       {isReportModalOpen && (
         <ReportModal
           userCoords={userCoords}
@@ -350,7 +324,6 @@ export default function App() {
         />
       )}
 
-      {/* Incident Details & Voting Popup */}
       {selectedIncident && (
         <IncidentDetails
           incident={selectedIncident}
@@ -362,7 +335,6 @@ export default function App() {
         />
       )}
 
-      {/* Core MapLibre Canvas */}
       <main className="flex-1 w-full h-full relative">
         <MapView
           theme={theme}

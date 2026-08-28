@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 interface SpeedometerProps {
   currentSpeedKmh: number;
-  speedLimit?: number; // default e.g. 60 or 90 km/h
+  speedLimit?: number;
 }
 
 export function Speedometer({ currentSpeedKmh, speedLimit = 80 }: SpeedometerProps) {
@@ -17,26 +17,24 @@ export function Speedometer({ currentSpeedKmh, speedLimit = 80 }: SpeedometerPro
   return (
     <div 
       onClick={() => setUseMph(!useMph)}
-      className={`relative cursor-pointer select-none rounded-3xl p-3.5 backdrop-blur-xl border shadow-2xl transition-all flex items-center gap-3 ${
+      className={`relative cursor-pointer select-none rounded-2xl p-3 glass-genshin shadow-2xl transition-all flex items-center gap-3 ${
         isOverSpeed
-          ? 'bg-rose-950/90 border-rose-500/80 shadow-rose-500/30 animate-pulse'
-          : 'bg-slate-900/90 border-slate-800 shadow-slate-950/50'
+          ? 'border-rose-500/80 shadow-rose-500/30'
+          : 'border-[#d3bc8e]/40 hover:border-[#d3bc8e]'
       }`}
-      title="Click to toggle KM/H / MPH"
+      title="Toggle KM/H / MPH"
     >
-      {/* Speedometer Gauge & Number */}
-      <div className="flex flex-col items-center justify-center min-w-[58px]">
-        <span className={`text-3xl font-extrabold tracking-tighter leading-none ${
-          isOverSpeed ? 'text-rose-400' : 'text-white'
+      <div className="flex flex-col items-center justify-center min-w-[56px]">
+        <span className={`text-3xl font-extrabold tracking-tighter leading-none font-cinzel ${
+          isOverSpeed ? 'text-rose-400' : 'text-[#f7f4ee]'
         }`}>
           {displaySpeed}
         </span>
-        <span className="text-[9px] font-bold tracking-wider text-slate-400 mt-0.5">{unit}</span>
+        <span className="text-[9px] font-bold tracking-widest text-[#d3bc8e] mt-0.5">{unit}</span>
       </div>
 
-      {/* Speed Limit Circular Sign */}
-      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-[3px] border-rose-600 shadow-md">
-        <span className="text-xs font-black text-slate-950 leading-none">{displayLimit}</span>
+      <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#ede8db] border-2 border-rose-600 shadow-md">
+        <span className="text-xs font-black text-[#0c1322] leading-none font-cinzel">{displayLimit}</span>
       </div>
     </div>
   );

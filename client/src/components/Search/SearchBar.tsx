@@ -54,20 +54,19 @@ export function SearchBar({ onSelectResult }: SearchBarProps) {
 
   return (
     <div className="relative w-full max-w-sm pointer-events-auto">
-      {/* Search Input Box */}
-      <div className="flex items-center gap-2.5 bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl px-3.5 py-2.5 shadow-2xl focus-within:border-sky-500 transition-colors">
+      <div className="glass-genshin flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 shadow-2xl border border-[#d3bc8e]/40 focus-within:border-[#d3bc8e] transition-colors">
         {isLoading ? (
-          <Loader2 className="w-4 h-4 text-sky-400 animate-spin shrink-0" />
+          <Loader2 className="w-4 h-4 text-[#d3bc8e] animate-spin shrink-0" />
         ) : (
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <Search className="w-4 h-4 text-[#d3bc8e] shrink-0" />
         )}
 
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Where to? (Search address or place)"
-          className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+          placeholder="Where shall we venture today?"
+          className="w-full bg-transparent text-xs text-[#f7f4ee] placeholder-[#ede8db]/40 focus:outline-none"
         />
 
         {query && (
@@ -77,31 +76,30 @@ export function SearchBar({ onSelectResult }: SearchBarProps) {
               setResults([]);
               setIsOpen(false);
             }}
-            className="p-1 text-slate-400 hover:text-white"
+            className="p-1 text-[#d3bc8e]/70 hover:text-[#f7f4ee]"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Autocomplete Results Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col divide-y divide-slate-800/60 max-h-64 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 glass-genshin rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col divide-y divide-[#d3bc8e]/15 max-h-64 overflow-y-auto border border-[#d3bc8e]/40">
           {results.map((item, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handleSelect(item)}
-              className="flex items-center gap-3 p-3 text-left hover:bg-slate-800/70 transition-colors"
+              className="flex items-center gap-3 p-3 text-left hover:bg-[#d3bc8e]/10 transition-colors"
             >
-              <div className="w-7 h-7 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 text-sky-400">
+              <div className="w-6 h-6 rounded-lg bg-[#d3bc8e]/20 border border-[#d3bc8e]/40 flex items-center justify-center shrink-0 text-[#d3bc8e]">
                 <MapPin className="w-3.5 h-3.5" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-white truncate">
+                <span className="text-xs font-bold text-[#f7f4ee] truncate">
                   {item.name || item.display_name?.split(',')[0]}
                 </span>
-                <span className="text-[10px] text-slate-400 truncate">
+                <span className="text-[10px] text-[#ede8db]/60 truncate">
                   {item.display_name}
                 </span>
               </div>

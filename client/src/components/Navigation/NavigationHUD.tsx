@@ -32,7 +32,6 @@ export function NavigationHUD({
     voiceEngine.setMuted(nextState);
   };
 
-  // Format distance
   const formatDist = (meters: number) => {
     if (meters >= 1000) {
       return `${(meters / 1000).toFixed(1)} km`;
@@ -40,18 +39,16 @@ export function NavigationHUD({
     return `${Math.round(meters)} m`;
   };
 
-  // Format remaining duration
   const formatDuration = (seconds: number) => {
     const mins = Math.round(seconds / 60);
     if (mins >= 60) {
       const hrs = Math.floor(mins / 60);
       const remMins = mins % 60;
-      return `${hrs} hr ${remMins} min`;
+      return `${hrs}h ${remMins}m`;
     }
     return `${mins} min`;
   };
 
-  // Estimated Arrival Time
   const arrivalTime = new Date(Date.now() + remainingDuration * 1000).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -59,81 +56,77 @@ export function NavigationHUD({
 
   return (
     <>
-      {/* Top Maneuver Card */}
       <div className="absolute top-3 left-3 right-3 z-40 flex flex-col gap-2 max-w-lg mx-auto">
-        <div className="bg-slate-900/95 backdrop-blur-2xl border border-sky-500/30 rounded-3xl p-4 shadow-2xl flex items-center justify-between gap-4">
+        <div className="glass-genshin rounded-2xl p-4 shadow-2xl flex items-center justify-between gap-4 border border-[#d3bc8e]/40">
           <div className="flex items-center gap-3.5 flex-1 min-w-0">
-            {/* Maneuver Big Icon Box */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shrink-0">
+            <div className="w-12 h-12 p-2 rounded-xl bg-gradient-to-br from-[#d3bc8e] to-[#94784a] text-[#0c1322] flex items-center justify-center shadow-lg shrink-0 border border-[#f7f4ee]/40">
               <ManeuverIcon
                 type={currentStep?.maneuverType || 'straight'}
                 modifier={currentStep?.modifier}
-                className="w-9 h-9 text-white stroke-[2.5]"
+                className="w-7 h-7 stroke-[2.5]"
               />
             </div>
 
-            {/* Distance & Street Instruction */}
             <div className="flex flex-col min-w-0">
-              <span className="text-2xl font-black text-white tracking-tight leading-none">
-                {formatDist(distanceToNextStep)}
-              </span>
-              <p className="text-sm font-semibold text-slate-200 truncate mt-1">
-                {currentStep?.instruction || 'Continue straight'}
+              <div className="flex items-center gap-1.5">
+                <span className="text-2xl font-black text-[#f7f4ee] font-cinzel leading-none">
+                  {formatDist(distanceToNextStep)}
+                </span>
+                <span className="text-[10px] text-[#d3bc8e] font-semibold tracking-wider uppercase">✦ Ahead</span>
+              </div>
+              <p className="text-xs font-semibold text-[#ede8db] truncate mt-1">
+                {currentStep?.instruction || 'Continue on current route'}
               </p>
             </div>
           </div>
 
-          {/* Voice Mute Toggle */}
           <button
             onClick={toggleMute}
-            className={`p-3 rounded-2xl border transition-colors shrink-0 ${
+            className={`p-2.5 rounded-xl border transition-all shrink-0 ${
               isMuted
-                ? 'bg-slate-800 border-slate-700 text-slate-400'
-                : 'bg-sky-500/20 border-sky-500/40 text-sky-400'
+                ? 'bg-[#0c1322]/80 border-[#d3bc8e]/20 text-slate-400'
+                : 'bg-[#d3bc8e]/20 border-[#d3bc8e]/50 text-[#d3bc8e]'
             }`}
-            title={isMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+            title={isMuted ? 'Unmute voice' : 'Mute voice'}
           >
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Next Maneuver Preview Sub-bar */}
         {nextStep && (
-          <div className="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-2 text-xs text-slate-400 mx-2 shadow-lg">
-            <span>Then</span>
-            <ManeuverIcon type={nextStep.maneuverType} modifier={nextStep.modifier} className="w-3.5 h-3.5 text-slate-300" />
-            <span className="truncate text-slate-300 font-medium">{nextStep.instruction}</span>
+          <div className="glass-genshin-subtle px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs text-[#d3bc8e]/80 mx-2 shadow-lg border border-[#d3bc8e]/20">
+            <span className="font-cinzel text-[10px] text-[#d3bc8e]">THEN</span>
+            <ManeuverIcon type={nextStep.maneuverType} modifier={nextStep.modifier} className="w-3.5 h-3.5 text-[#ede8db]" />
+            <span className="truncate text-[#ede8db] font-medium text-[11px]">{nextStep.instruction}</span>
           </div>
         )}
       </div>
 
-      {/* Floating Speedometer (Bottom Left) */}
-      <div className="absolute left-4 bottom-24 z-30">
+      <div className="absolute left-3 bottom-24 z-30">
         <Speedometer currentSpeedKmh={currentSpeedKmh} />
       </div>
 
-      {/* Bottom ETA & Trip Summary Bar */}
       <div className="absolute bottom-3 left-3 right-3 z-40 max-w-lg mx-auto">
-        <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-3xl p-4 shadow-2xl flex items-center justify-between">
-          <div className="flex items-center gap-5">
+        <div className="glass-genshin rounded-2xl p-4 shadow-2xl flex items-center justify-between border border-[#d3bc8e]/40">
+          <div className="flex items-center gap-4">
             <div className="flex flex-col">
-              <span className="text-2xl font-black text-emerald-400 leading-none">
-                {formatDuration(remainingDuration)}
-              </span>
-              <div className="flex items-center gap-3 text-xs font-semibold text-slate-400 mt-1">
-                <span>{formatDist(remainingDistance)}</span>
-                <span>•</span>
-                <span className="text-slate-200">ETA {arrivalTime}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-[#5ce1e6] font-cinzel leading-none">
+                  {formatDuration(remainingDuration)}
+                </span>
+                <span className="text-xs font-semibold text-[#d3bc8e]">ETA {arrivalTime}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] font-medium text-[#ede8db]/70 mt-1">
+                <span>{formatDist(remainingDistance)} remaining</span>
               </div>
             </div>
           </div>
 
-          {/* End Navigation Button */}
           <button
             onClick={onStopNavigation}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-rose-600/20 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white font-bold text-xs shadow-lg transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white font-bold text-xs shadow-lg transition-all"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
             <span>End</span>
           </button>
         </div>

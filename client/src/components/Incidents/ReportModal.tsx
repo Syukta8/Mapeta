@@ -13,41 +13,41 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categories: { type: Incident['type']; label: string; icon: any; color: string; desc: string }[] = [
+  const categories: { type: Incident['type']; label: string; icon: any; desc: string; emoji: string }[] = [
     {
       type: 'police',
-      label: 'Police / Radar',
+      label: 'Patrol / Camera',
       icon: Shield,
-      color: 'bg-blue-600 border-blue-400 text-white shadow-blue-500/30',
-      desc: 'Speed camera or patrol car',
+      desc: 'Speed radar or police unit',
+      emoji: '👮',
     },
     {
       type: 'hazard',
-      label: 'Hazard',
+      label: 'Road Hazard',
       icon: AlertTriangle,
-      color: 'bg-amber-500 border-amber-300 text-slate-950 shadow-amber-500/30',
-      desc: 'Object, pothole, or animal on road',
+      desc: 'Pothole, debris, or obstacle',
+      emoji: '⚠️',
     },
     {
       type: 'jam',
       label: 'Traffic Jam',
       icon: Car,
-      color: 'bg-rose-600 border-rose-400 text-white shadow-rose-500/30',
-      desc: 'Heavy standstill traffic',
+      desc: 'Standstill congestion',
+      emoji: '🚗',
     },
     {
       type: 'closure',
       label: 'Road Closure',
       icon: Construction,
-      color: 'bg-purple-600 border-purple-400 text-white shadow-purple-500/30',
-      desc: 'Construction or blocked lane',
+      desc: 'Blocked path or work zone',
+      emoji: '🚧',
     },
     {
       type: 'accident',
       label: 'Accident',
       icon: Flame,
-      color: 'bg-orange-600 border-orange-400 text-white shadow-orange-500/30',
       desc: 'Crash or vehicle breakdown',
+      emoji: '💥',
     },
   ];
 
@@ -73,43 +73,39 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-bottom-8 duration-300">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 bg-[#0c1322]/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-md glass-genshin rounded-2xl p-5 shadow-2xl flex flex-col gap-4 border border-[#d3bc8e]/40 animate-in slide-in-from-bottom-8 duration-300">
+        <div className="flex items-center justify-between border-b border-[#d3bc8e]/20 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
-            <h2 className="text-base font-bold text-white">Report Road Incident</h2>
+            <span className="text-[#d3bc8e] font-cinzel font-bold text-sm">✦ REPORT INCIDENT</span>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-2xl bg-slate-800/80 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-xl bg-[#0c1322]/80 text-[#ede8db]/70 hover:text-[#f7f4ee] border border-[#d3bc8e]/20 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Quick-Select Category Grid */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2">
           {categories.map((cat) => {
-            const Icon = cat.icon;
             const isSelected = selectedType === cat.type;
             return (
               <button
                 key={cat.type}
                 type="button"
                 onClick={() => setSelectedType(cat.type)}
-                className={`p-3 rounded-2xl border flex flex-col items-start gap-1.5 transition-all text-left ${
+                className={`p-2.5 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
                   isSelected
-                    ? `${cat.color} shadow-lg scale-[1.02]`
-                    : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-[#d3bc8e]/20 border-[#d3bc8e] text-[#f7f4ee] shadow-lg shadow-[#d3bc8e]/10'
+                    : 'bg-[#0c1322]/60 border-[#d3bc8e]/20 text-[#ede8db]/70 hover:border-[#d3bc8e]/40'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-bold">{cat.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">{cat.emoji}</span>
+                  <span className="text-xs font-bold text-[#f7f4ee]">{cat.label}</span>
                 </div>
-                <span className={`text-[10px] leading-tight ${isSelected ? 'opacity-90' : 'text-slate-500'}`}>
+                <span className="text-[10px] text-[#ede8db]/60 leading-tight">
                   {cat.desc}
                 </span>
               </button>
@@ -117,26 +113,24 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
           })}
         </div>
 
-        {/* Optional Note / Description */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-400">Additional Note (Optional)</label>
+          <label className="text-[11px] font-semibold text-[#d3bc8e]">Details (Optional)</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Right lane blocked, patrol with camera"
-            className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+            placeholder="e.g. Left lane blocked, heavy slow down"
+            className="w-full bg-[#0c1322]/80 border border-[#d3bc8e]/30 rounded-xl px-3.5 py-2 text-xs text-[#f7f4ee] placeholder-[#ede8db]/40 focus:outline-none focus:border-[#d3bc8e] transition-colors"
           />
         </div>
 
-        {/* Submit Report Button */}
         <button
           onClick={handleSubmit}
           disabled={isSubmitting || !userCoords}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-sky-400 to-blue-600 hover:from-sky-300 hover:to-blue-500 text-white font-extrabold text-sm shadow-xl shadow-sky-500/25 active:scale-98 disabled:opacity-50 transition-all"
+          className="gold-btn w-full flex items-center justify-center gap-2 py-3 rounded-xl font-extrabold text-xs tracking-wider font-cinzel active:scale-95 disabled:opacity-50 transition-all"
         >
-          <Send className="w-4 h-4" />
-          <span>{isSubmitting ? 'Broadcasting...' : 'Broadcast to Mapeta Community'}</span>
+          <Send className="w-3.5 h-3.5" />
+          <span>{isSubmitting ? 'DISPATCHING...' : 'BROADCAST TO TRAVELERS'}</span>
         </button>
       </div>
     </div>

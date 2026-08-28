@@ -37,7 +37,6 @@ export function MapView({
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
 
-  // 1. Initialize MapLibre instance with explicit drag & touch gesture support
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -60,14 +59,12 @@ export function MapView({
 
     map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
-    // Click handler for picking destination
     map.on('click', (e) => {
       if (onMapClick) {
         onMapClick([e.lngLat.lng, e.lngLat.lat]);
       }
     });
 
-    // Detect user dragging or touch panning to disable automatic recentering
     map.on('dragstart', () => {
       if (onUserPan) onUserPan();
     });
@@ -84,14 +81,12 @@ export function MapView({
     };
   }, []);
 
-  // 2. Handle theme style changes
   useEffect(() => {
     if (!mapRef.current) return;
     const targetStyle = theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day;
     mapRef.current.setStyle(targetStyle);
   }, [theme]);
 
-  // 3. Update User Location Marker & Camera Tracking
   useEffect(() => {
     if (!mapRef.current || !userCoords) return;
 
@@ -101,9 +96,9 @@ export function MapView({
       const el = document.createElement('div');
       el.className = 'relative flex items-center justify-center w-12 h-12 pointer-events-none';
       el.innerHTML = `
-        <div class="user-pos-pulse absolute w-12 h-12 rounded-full bg-sky-400/40"></div>
-        <div class="w-8 h-8 rounded-full bg-sky-500 border-2 border-white shadow-2xl flex items-center justify-center z-10">
-          <svg id="marker-arrow" class="w-5 h-5 text-white transition-transform duration-300" viewBox="0 0 24 24" fill="currentColor">
+        <div class="celestial-pos-pulse absolute w-12 h-12 rounded-full bg-[#d3bc8e]/40"></div>
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#d3bc8e] to-[#94784a] border-2 border-[#f7f4ee] shadow-2xl flex items-center justify-center z-10">
+          <svg id="marker-arrow" class="w-5 h-5 text-[#0c1322] transition-transform duration-300" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
           </svg>
         </div>
@@ -120,7 +115,6 @@ export function MapView({
       arrow.style.transform = `rotate(${heading}deg)`;
     }
 
-    // Only auto-pan camera if followUser is explicitly true
     if (followUser && mapRef.current) {
       mapRef.current.easeTo({
         center: [longitude, latitude],
@@ -132,13 +126,11 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
-  // 4. Render Multiple Routes and Alternative Route Polylines
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const renderRoutes = () => {
-      // Clear existing layers & sources
       for (let i = 0; i < 5; i++) {
         if (map.getLayer(`route-casing-${i}`)) map.removeLayer(`route-casing-${i}`);
         if (map.getLayer(`route-line-${i}`)) map.removeLayer(`route-line-${i}`);
@@ -149,7 +141,6 @@ export function MapView({
         allRoutes = [activeRoute];
       }
 
-      // Render alternative routes first, selected route on top
       allRoutes.forEach((r, idx) => {
         const isSelected = idx === selectedRouteIndex;
         const sourceId = `route-source-${idx}`;
@@ -165,7 +156,6 @@ export function MapView({
           },
         });
 
-        // Casing outline
         map.addLayer({
           id: casingLayerId,
           type: 'line',
@@ -175,13 +165,12 @@ export function MapView({
             'line-cap': 'round',
           },
           paint: {
-            'line-color': isSelected ? '#0284c7' : '#334155',
-            'line-width': isSelected ? 9 : 6,
-            'line-opacity': isSelected ? 1 : 0.7,
+            'line-color': isSelected ? '#d3bc8e' : '#1e293b',
+            'line-width': isSelected ? 8 : 5,
+            'line-opacity': isSelected ? 0.9 : 0.6,
           },
         });
 
-        // Inner line
         map.addLayer({
           id: lineLayerId,
           type: 'line',
@@ -191,13 +180,12 @@ export function MapView({
             'line-cap': 'round',
           },
           paint: {
-            'line-color': isSelected ? (r.hasTolls ? '#38bdf8' : '#34d399') : '#64748b',
-            'line-width': isSelected ? 6 : 4,
-            'line-opacity': isSelected ? 1 : 0.8,
+            'line-color': isSelected ? '#5ce1e6' : '#64748b',
+            'line-width': isSelected ? 5 : 3.5,
+            'line-opacity': isSelected ? 1 : 0.7,
           },
         });
 
-        // Click on alternative route polyline to switch to it
         map.on('click', lineLayerId, () => {
           if (onSelectAlternative) {
             onSelectAlternative(idx);
@@ -205,7 +193,6 @@ export function MapView({
         });
       });
 
-      // Fit map bounds to show full route if not actively driving
       if (!isNavigating && allRoutes[selectedRouteIndex]) {
         const coords = allRoutes[selectedRouteIndex].geometry.coordinates;
         const bounds = coords.reduce(
@@ -223,7 +210,6 @@ export function MapView({
     }
   }, [allRoutes, selectedRouteIndex, activeRoute, isNavigating, onSelectAlternative]);
 
-  // 5. Render Incident Badges
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -231,12 +217,12 @@ export function MapView({
     incidentMarkersRef.current.forEach((marker) => marker.remove());
     incidentMarkersRef.current.clear();
 
-    const iconColors: Record<string, { bg: string; text: string; label: string; emoji: string }> = {
-      police: { bg: 'bg-blue-600', text: 'text-white', label: 'Police', emoji: '👮' },
-      hazard: { bg: 'bg-amber-500', text: 'text-slate-950', label: 'Hazard', emoji: '⚠️' },
-      jam: { bg: 'bg-rose-600', text: 'text-white', label: 'Jam', emoji: '🚗' },
-      closure: { bg: 'bg-purple-600', text: 'text-white', label: 'Closure', emoji: '🚧' },
-      accident: { bg: 'bg-orange-600', text: 'text-white', label: 'Accident', emoji: '💥' },
+    const iconColors: Record<string, { bg: string; text: string; emoji: string }> = {
+      police: { bg: 'bg-gradient-to-br from-[#d3bc8e] to-[#94784a]', text: 'text-[#0c1322]', emoji: '👮' },
+      hazard: { bg: 'bg-gradient-to-br from-amber-500 to-amber-700', text: 'text-white', emoji: '⚠️' },
+      jam: { bg: 'bg-gradient-to-br from-rose-600 to-rose-800', text: 'text-white', emoji: '🚗' },
+      closure: { bg: 'bg-gradient-to-br from-purple-600 to-purple-800', text: 'text-white', emoji: '🚧' },
+      accident: { bg: 'bg-gradient-to-br from-orange-500 to-orange-700', text: 'text-white', emoji: '💥' },
     };
 
     incidents.forEach((inc) => {
@@ -244,10 +230,10 @@ export function MapView({
       const el = document.createElement('div');
       el.className = 'cursor-pointer group flex flex-col items-center';
       el.innerHTML = `
-        <div class="w-9 h-9 rounded-2xl ${config.bg} ${config.text} border-2 border-white shadow-2xl flex items-center justify-center text-sm font-bold transform transition-transform group-hover:scale-125">
+        <div class="w-8 h-8 rounded-xl ${config.bg} ${config.text} border-2 border-[#f7f4ee] shadow-2xl flex items-center justify-center text-sm font-bold transform transition-transform group-hover:scale-125">
           ${config.emoji}
         </div>
-        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-slate-700 mt-1 shadow-lg pointer-events-none whitespace-nowrap">
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-[#0c1322]/95 text-[#f7f4ee] text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-[#d3bc8e]/40 mt-1 shadow-lg pointer-events-none whitespace-nowrap font-cinzel">
           ${inc.title}
         </div>
       `;
