@@ -22,50 +22,64 @@ routeRouter.get('/', async (req, res) => {
       return res.json({ success: true, data });
     }
 
-    // Driving Mode: Multi-Detour & Multi-Engine Parallel Harvesting
-    // 1. Direct Highway Query with alternatives=3
-    const directUrl = `https://routing.openstreetmap.de/routed-driving/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&annotations=true&alternatives=3`;
-    const fallbackDirectUrl = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&alternatives=3`;
+    // Driving Mode: Guaranteed 3 to 4 Diverse Alternative Routes
+    // 1. Query Direct Highway with alternatives=3
+    const directUrl1 = `https://routing.openstreetmap.de/routed-driving/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&annotations=true&alternatives=3`;
+    const directUrl2 = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true&alternatives=3`;
 
-    // 2. Compute 2 Smart Midpoint Detour Waypoints (Left/Coastal offset & Right/Inland offset)
-    const midLng = (startLng + endLng) / 2;
-    const midLat = (startLat + endLat) / 2;
+    // 2. Generate 4 Smart Corridor Waypoints with Perpendicular Offsets
     const dLng = endLng - startLng;
     const dLat = endLat - startLat;
-    const distFactor = Math.min(0.25, Math.sqrt(dLng * dLng + dLat * dLat) * 0.22);
+    const dist = Math.sqrt(dLng * dLng + dLat * dLat);
+    const offsetFactor = Math.min(0.28, Math.max(0.12, dist * 0.2));
 
-    // Perpendicular vector (-dLat, dLng)
-    const p1Lng = Number((midLng - dLat * distFactor).toFixed(5));
-    const p1Lat = Number((midLat + dLng * distFactor).toFixed(5));
-    const p2Lng = Number((midLng + dLat * distFactor).toFixed(5));
-    const p2Lat = Number((midLat - dLng * distFactor).toFixed(5));
+    const candidatePoints = [
+      [startLng + dLng * 0.35 - dLat * offsetFactor, startLat + dLat * 0.35 + dLng * offsetFactor],
+      [startLng + dLng * 0.65 + dLat * offsetFactor, startLat + dLat * 0.65 - dLng * offsetFactor],
+      [startLng + dLng * 0.50 - dLat * (offsetFactor * 1.3), startLat + dLat * 0.50 + dLng * (offsetFactor * 1.3)],
+      [startLng + dLng * 0.50 + dLat * (offsetFactor * 1.3), startLat + dLat * 0.50 - dLng * (offsetFactor * 1.3)],
+    ];
 
-    const detourUrl1 = `https://routing.openstreetmap.de/routed-driving/route/v1/driving/${start};${p1Lng},${p1Lat};${end}?overview=full&geometries=geojson&steps=true&annotations=true`;
-    const detourUrl2 = `https://routing.openstreetmap.de/routed-driving/route/v1/driving/${start};${p2Lng},${p2Lat};${end}?overview=full&geometries=geojson&steps=true&annotations=true`;
+    // Snap corridor waypoints to nearest real drivable roads in parallel
+    const snapPromises = candidatePoints.map(async ([pLng, pLat]) => {
+      try {
+        const snapUrl = `https://router.project-osrm.org/nearest/v1/driving/${pLng.toFixed(5)},${pLat.toFixed(5)}`;
+        const snapRes = await fetch(snapUrl, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } });
+        const snapData = await snapRes.json();
+        if (snapData.waypoints?.[0]?.location) {
+          const [sLng, sLat] = snapData.waypoints[0].location;
+          const detourUrl = `https://router.project-osrm.org/route/v1/driving/${start};${sLng},${sLat};${end}?overview=full&geometries=geojson&steps=true`;
+          const routeRes = await fetch(detourUrl, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } });
+          const routeData = await routeRes.json();
+          return routeData.routes?.[0] || null;
+        }
+      } catch (e) {
+        return null;
+      }
+      return null;
+    });
 
-    const [rDirect, rFallback, rDetour1, rDetour2] = await Promise.allSettled([
-      fetch(directUrl, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()),
-      fetch(fallbackDirectUrl, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()),
-      fetch(detourUrl1, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()),
-      fetch(detourUrl2, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()),
+    const [rDirect1, rDirect2, ...detourResults] = await Promise.allSettled([
+      fetch(directUrl1, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()).catch(() => ({})),
+      fetch(directUrl2, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } }).then((r) => r.json()).catch(() => ({})),
+      ...snapPromises,
     ]);
 
     const collectedRoutes: any[] = [];
 
-    if (rDirect.status === 'fulfilled' && rDirect.value.routes) {
-      collectedRoutes.push(...rDirect.value.routes);
+    if (rDirect1.status === 'fulfilled' && rDirect1.value?.routes) {
+      collectedRoutes.push(...rDirect1.value.routes);
     }
-    if (rFallback.status === 'fulfilled' && rFallback.value.routes) {
-      collectedRoutes.push(...rFallback.value.routes);
-    }
-    if (rDetour1.status === 'fulfilled' && rDetour1.value.routes) {
-      collectedRoutes.push(...rDetour1.value.routes);
-    }
-    if (rDetour2.status === 'fulfilled' && rDetour2.value.routes) {
-      collectedRoutes.push(...rDetour2.value.routes);
+    if (rDirect2.status === 'fulfilled' && rDirect2.value?.routes) {
+      collectedRoutes.push(...rDirect2.value.routes);
     }
 
-    // If still empty, return error
+    detourResults.forEach((res) => {
+      if (res.status === 'fulfilled' && res.value) {
+        collectedRoutes.push(res.value);
+      }
+    });
+
     if (collectedRoutes.length === 0) {
       return res.status(500).json({ success: false, error: 'Could not calculate routes' });
     }

@@ -18,11 +18,11 @@ export function processMultiRoutes(
 
     if (coords.length === 0) return;
 
-    // Check if this route is substantially distinct (distance diff > 500m or time diff > 60s)
+    // Check if this route is substantially distinct (distance diff > 800m or time diff > 90s)
     const isDuplicate = parsedRoutes.some((existing) => {
       const distDiff = Math.abs(existing.distance - rawDistance);
       const timeDiff = Math.abs(existing.rawDuration - rawDuration);
-      return distDiff < 600 && timeDiff < 90;
+      return distDiff < 800 && timeDiff < 90;
     });
 
     if (isDuplicate) return;
@@ -120,7 +120,8 @@ export function processMultiRoutes(
     });
   });
 
-  return parsedRoutes.sort((a, b) => a.duration - b.duration);
+  // Sort initially by duration and return up to 4 diverse routes
+  return parsedRoutes.sort((a, b) => a.duration - b.duration).slice(0, 4);
 }
 
 function mapOSRMType(type: string, modifier?: string): ManeuverType {

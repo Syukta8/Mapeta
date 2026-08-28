@@ -168,13 +168,22 @@ export function RouteSummary({
           </div>
         )}
 
-        {/* Multi-Route Selection Cards */}
+        {/* Up to 4 Diverse Alternative Route Cards */}
         {allRoutes.length > 1 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-0.5">
+          <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
             {allRoutes.map((r, idx) => {
               const isSelected = idx === selectedRouteIndex;
               const fastestSec = Math.min(...allRoutes.map((x) => x.duration));
               const diffSec = r.duration - fastestSec;
+
+              let labelText = `Option ${idx + 1}`;
+              if (diffSec === 0) {
+                labelText = '✦ Best / Fastest';
+              } else if (!r.hasTolls) {
+                labelText = '✦ Toll-Free';
+              } else {
+                labelText = `✦ Alternative ${idx + 1}`;
+              }
 
               return (
                 <button
@@ -188,15 +197,15 @@ export function RouteSummary({
                 >
                   <div className="flex items-center justify-between">
                     <span className={`text-[11px] font-bold ${isSelected ? 'text-[#a8c7fa]' : 'text-slate-400'}`}>
-                      {diffSec === 0 ? 'Best Route' : `Option ${idx + 1}`}
+                      {labelText}
                     </span>
-                    {isSelected && <Check className="w-3 h-3 text-[#a8c7fa]" />}
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#a8c7fa]" />}
                   </div>
 
                   <div className="flex items-baseline gap-1">
                     <span className="text-base font-extrabold text-white">{formatDuration(r.duration)}</span>
                     {diffSec > 0 && (
-                      <span className="text-[10px] text-amber-400">+{Math.round(diffSec / 60)}m</span>
+                      <span className="text-[10px] text-amber-400 font-bold">+{Math.round(diffSec / 60)}m</span>
                     )}
                   </div>
 
@@ -211,6 +220,8 @@ export function RouteSummary({
                       <span className="text-[9px] text-emerald-400 font-bold">🟢 Clear</span>
                     )}
                   </div>
+
+                  <span className="text-[10px] text-slate-400 truncate max-w-[170px] mt-0.5">{r.summary}</span>
                 </button>
               );
             })}
@@ -219,7 +230,7 @@ export function RouteSummary({
 
         {/* LLM Toll Breakdown Modal / Drawer */}
         {showTollBreakdown && activeRoute && activeRoute.tollBreakdown.length > 0 && (
-          <div className="p-3 bg-[#212226] rounded-2xl border border-[#a8c7fa]/30 flex flex-col gap-2 animate-in fade-in duration-200">
+          <div className="p-3.5 bg-[#212226] rounded-2xl border border-[#a8c7fa]/30 flex flex-col gap-2 animate-in fade-in duration-200">
             <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
               <div className="flex items-center gap-1.5">
                 <DollarSign className="w-3.5 h-3.5 text-[#a8c7fa]" />
