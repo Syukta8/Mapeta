@@ -1,6 +1,8 @@
+/**
+ * Mapeta Voice Guidance Engine using Web Speech Synthesis API
+ */
 class VoiceEngine {
   private synth: SpeechSynthesis | null = null;
-  private voice: SpeechSynthesisVoice | null = null;
   private isMuted: boolean = false;
   private lastSpokenText: string = '';
   private lastSpokenTime: number = 0;
@@ -8,25 +10,6 @@ class VoiceEngine {
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
-      this.initVoice();
-    }
-  }
-
-  private initVoice() {
-    if (!this.synth) return;
-    const loadVoices = () => {
-      const voices = this.synth!.getVoices();
-      // Select natural English voice if available
-      this.voice =
-        voices.find((v) => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Siri'))) ||
-        voices.find((v) => v.lang.startsWith('en')) ||
-        voices[0] ||
-        null;
-    };
-
-    loadVoices();
-    if (this.synth.onvoiceschanged !== undefined) {
-      this.synth.onvoiceschanged = loadVoices;
     }
   }
 
@@ -41,28 +24,58 @@ class VoiceEngine {
     return this.isMuted;
   }
 
-  public speak(text: string, force = false) {
+  public speak(text: string, priority: boolean = false) {
     if (this.isMuted || !this.synth || !text) return;
 
     const now = Date.now();
-    // Avoid repeating same speech within 8 seconds unless forced
-    if (!force && text === this.lastSpokenText && now - this.lastSpokenTime < 8000) {
+    if (this.lastSpokenText === text && now - this.lastSpokenTime < 4000) {
       return;
     }
 
-    this.synth.cancel(); // Cancel previous ongoing utterance for timely navigation prompt
+    if (priority) {
+      this.synth.cancel();
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    if (this.voice) {
-      utterance.voice = this.voice;
-    }
     utterance.rate = 1.05;
     utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    const voices = this.synth.getVoices();
+    const englishVoice = voices.find(
+      (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google'))
+    ) || voices.find((v) => v.lang.startsWith('en'));
+
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
 
     this.lastSpokenText = text;
     this.lastSpokenTime = now;
-
     this.synth.speak(utterance);
+  }
+
+  public speakIncidentAlert(type: string, subtype?: string) {
+    const detail = subtype ? `${subtype}` : type;
+    switch (type) {
+      case 'police':
+        this.speak(`Caution, police reported ahead.`, true);
+        break;
+      case 'jam':
+        this.speak(`Traffic congestion ahead.`, true);
+        break;
+      case 'hazard':
+        this.speak(`Warning, hazard reported on road ahead.`, true);
+        break;
+      case 'accident':
+        this.speak(`Caution, accident reported ahead.`, true);
+        break;
+      case 'closure':
+        this.speak(`Road closure reported ahead.`, true);
+        break;
+      default:
+        this.speak(`Alert: ${detail} reported ahead.`, true);
+    }
   }
 }
 
