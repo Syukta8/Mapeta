@@ -3,6 +3,8 @@ import { MapView } from '../components/Map/MapView';
 import { NavigationHUD } from '../components/Navigation/NavigationHUD';
 import { RouteSummary } from '../components/UI/RouteSummary';
 import { SearchBar } from '../components/Search/SearchBar';
+import { FavoritesBar } from '../components/Search/FavoritesBar';
+import { SaveFavoriteModal } from '../components/Search/SaveFavoriteModal';
 import { ReportModal } from '../components/Incidents/ReportModal';
 import { IncidentDetails } from '../components/Incidents/IncidentDetails';
 import { IncidentApproachAlert } from '../components/Incidents/IncidentApproachAlert';
@@ -11,6 +13,7 @@ import { useOrientation } from '../hooks/useOrientation';
 import { useMapViewModel } from '../viewmodels/useMapViewModel';
 import { useIncidentViewModel } from '../viewmodels/useIncidentViewModel';
 import { useNavigationViewModel } from '../viewmodels/useNavigationViewModel';
+import { useFavoritesViewModel } from '../viewmodels/useFavoritesViewModel';
 import type { Coordinates } from '../models/NavigationModel';
 
 export function MainNavigationView() {
@@ -40,55 +43,30 @@ export function MainNavigationView() {
   const incidentVM = useIncidentViewModel(userCoords, simulatedPosRef.isNavigating);
   const navVM = useNavigationViewModel(userCoords, incidentVM.incidents);
 
+  const favVM = useFavoritesViewModel(navVM.handleSelectDestination);
+
   return (
     <div className={`w-full h-full flex flex-col relative overflow-hidden ${mapVM.theme === 'night' ? 'dark bg-[#121316] text-[#e3e2e6]' : 'bg-[#fdfcff] text-[#121316]'}`}>
       
       {/* Top Header Bar */}
       {!navVM.isNavigating && (
-        <header className="absolute top-3 left-3 right-3 z-30 flex flex-col sm:flex-row items-center justify-between gap-2.5 pointer-events-none">
-          <div className="flex items-center justify-between w-full sm:w-auto gap-2.5 pointer-events-auto">
-            <div className="pixel-card px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/10">
+        <header className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none max-w-xl mx-auto">
+          <div className="flex items-center justify-between gap-2.5 pointer-events-auto">
+            {/* Logo Badge */}
+            <div className="pixel-card px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/10 shrink-0">
               <div className="w-6 h-6 rounded-full bg-[#0b57d0] flex items-center justify-center text-white shadow-sm">
                 <Navigation className="w-3.5 h-3.5 fill-current" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm font-bold tracking-tight text-white leading-none">Mapeta</h1>
-                  <span className={`w-1.5 h-1.5 rounded-full ${incidentVM.isConnected ? 'bg-[#6dd58c] animate-pulse' : 'bg-red-500'}`}></span>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm font-bold tracking-tight text-white leading-none">Mapeta</h1>
+                <span className={`w-1.5 h-1.5 rounded-full ${incidentVM.isConnected ? 'bg-[#6dd58c] animate-pulse' : 'bg-red-500'}`}></span>
               </div>
             </div>
 
-            <div className="flex sm:hidden items-center gap-1.5">
-              <button
-                onClick={mapVM.toggleTrafficLayer}
-                className={`pixel-card p-2.5 rounded-full border shadow-xl transition-all ${
-                  mapVM.showTrafficLayer
-                    ? 'bg-[#6dd58c]/20 text-[#6dd58c] border-[#6dd58c]/40'
-                    : 'text-slate-400 border-white/10'
-                }`}
-                title="Toggle Live Traffic"
-              >
-                <Activity className="w-4 h-4" />
-              </button>
-              <button
-                onClick={mapVM.toggleTheme}
-                className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 shadow-xl transition-colors"
-              >
-                {mapVM.theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="w-full sm:w-80 flex-1 max-w-sm">
-            <SearchBar onSelectResult={navVM.handleSelectDestination} />
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2 pointer-events-auto">
             {/* Live Traffic Toggle Pill */}
             <button
               onClick={mapVM.toggleTrafficLayer}
-              className={`pixel-card flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold shadow-xl transition-all ${
+              className={`pixel-card hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold shadow-xl transition-all ${
                 mapVM.showTrafficLayer
                   ? 'bg-[#6dd58c]/20 text-[#6dd58c] border-[#6dd58c]/40 shadow-[#6dd58c]/10'
                   : 'text-slate-400 border-white/10 hover:text-white'
@@ -100,18 +78,41 @@ export function MainNavigationView() {
             </button>
 
             {incidentVM.incidents.length > 0 && (
-              <div className="pixel-card flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-xl">
+              <div className="pixel-card hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-xl">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span>{incidentVM.incidents.length} alert{incidentVM.incidents.length > 1 ? 's' : ''}</span>
               </div>
             )}
+
+            {/* Theme Toggle */}
             <button
               onClick={mapVM.toggleTheme}
-              className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 hover:border-[#a8c7fa]/40 shadow-xl transition-colors"
+              className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 hover:border-[#a8c7fa]/40 shadow-xl transition-colors shrink-0"
               title="Toggle Day/Night Mode"
             >
               {mapVM.theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+          </div>
+
+          {/* Search Bar with Bookmark Action */}
+          <div className="w-full">
+            <SearchBar
+              onSelectResult={navVM.handleSelectDestination}
+              onBookmarkResult={(lat, lng, name, address) => favVM.openSaveModal(lat, lng, name, address)}
+            />
+          </div>
+
+          {/* Quick-Access Favorites Bar */}
+          <div className="w-full pointer-events-auto">
+            <FavoritesBar
+              favorites={favVM.favorites}
+              onSelectFavorite={favVM.selectFavorite}
+              onAddNew={() => {
+                if (userCoords) {
+                  favVM.openSaveModal(userCoords.latitude, userCoords.longitude, 'Current Location');
+                }
+              }}
+            />
           </div>
         </header>
       )}
@@ -222,6 +223,15 @@ export function MainNavigationView() {
           userCoords={userCoords}
           onClose={incidentVM.closeReportModal}
           onSubmit={incidentVM.reportIncident}
+        />
+      )}
+
+      {/* Save Favorite Place Modal */}
+      {favVM.isSaveModalOpen && (
+        <SaveFavoriteModal
+          target={favVM.pendingSaveTarget}
+          onClose={favVM.closeSaveModal}
+          onSave={favVM.saveFavorite}
         />
       )}
 

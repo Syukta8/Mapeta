@@ -1,25 +1,15 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import fs from 'fs';
 
-const dataDir = path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = path.join(dataDir, 'mapeta.sqlite');
+const dbPath = path.join(process.cwd(), 'mapeta.sqlite');
 export const db = new Database(dbPath);
 
-db.pragma('journal_mode = WAL');
-
-/**
- * Initializes database tables if they don't exist.
- */
 export function initDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS incidents (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
+      subtype TEXT,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
       title TEXT NOT NULL,
@@ -33,31 +23,17 @@ export function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS favorites (
       id TEXT PRIMARY KEY,
-      label TEXT NOT NULL,
       name TEXT NOT NULL,
+      type TEXT NOT NULL,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
-      icon TEXT DEFAULT 'pin'
+      address TEXT,
+      created_at INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS search_history (
-      id TEXT PRIMARY KEY,
-      query TEXT NOT NULL,
-      result_name TEXT NOT NULL,
-      lat REAL NOT NULL,
-      lng REAL NOT NULL,
-      timestamp INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS local_pois (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      lat REAL NOT NULL,
-      lng REAL NOT NULL,
-      address TEXT
-    );
+    CREATE INDEX IF NOT EXISTS idx_incidents_active ON incidents(active, expires_at);
+    CREATE INDEX IF NOT EXISTS idx_favorites_type ON favorites(type);
   `);
 
-  console.log('[Database] SQLite tables initialized successfully at:', dbPath);
+  console.log('[Database] SQLite initialized with incidents and favorites tables at:', dbPath);
 }
