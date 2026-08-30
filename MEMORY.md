@@ -34,4 +34,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Upgraded route search algorithm with multi-detour waypoints to guarantee multiple distinct routes (Expressway vs Federal trunk road vs Coastal).
 2026-08-28 — Overhauled UI to Google Pixel Experience (Material You / Android 15 tokens, rounded pills, Google Sans/Jakarta font) and added live in-navigation route switcher bottom sheet.
 2026-08-28 — Standing Rule: Do not deploy/restart the live server/tunnel until the user explicitly requests it. Dynamic multi-route algorithm verified 100% mathematical vector geometry with zero hardcoded paths.
-2026-08-30 — Added minimalist bottom-left map database timestamp badge ('OSM Data: Aug 2026 • Live Sync') and documented Android Auto & car head unit integration workflows.
+2026-08-30 — Fixed geocode search proxy (Photon + Nominatim), added Google Maps-style Dropped Pin with bottom Place Info Card (reverse-geocoded address, 🚗 Directions, ⭐ Save Favorite), and moved map database badge to the bottom-right corner.

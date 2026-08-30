@@ -14,6 +14,7 @@ interface MapViewProps {
   isNavigating: boolean;
   followUser: boolean;
   showTrafficLayer?: boolean;
+  selectedPoint?: { lat: number; lng: number } | null;
   onMapClick?: (coords: [number, number]) => void;
   onUserPan?: () => void;
   onIncidentClick?: (incident: Incident) => void;
@@ -30,6 +31,7 @@ export function MapView({
   isNavigating,
   followUser,
   showTrafficLayer = true,
+  selectedPoint = null,
   onMapClick,
   onUserPan,
   onIncidentClick,
@@ -38,6 +40,7 @@ export function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const droppedPinMarkerRef = useRef<maplibregl.Marker | null>(null);
   const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const lastFitBoundsKeyRef = useRef<string>('');
 
@@ -131,7 +134,37 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
-  // 🚦 Always-On Real-Time Live Traffic Layer (Green / Yellow / Red / Standstill)
+  // 📍 Google Maps Dropped Pin Marker for Map Clicks
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!selectedPoint) {
+      if (droppedPinMarkerRef.current) {
+        droppedPinMarkerRef.current.remove();
+        droppedPinMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (!droppedPinMarkerRef.current) {
+      const el = document.createElement('div');
+      el.className = 'relative flex flex-col items-center pointer-events-none animate-bounce';
+      el.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-red-600 border-2 border-white shadow-2xl flex items-center justify-center text-white font-bold text-sm">
+          📍
+        </div>
+        <div class="w-2.5 h-1 bg-black/40 rounded-full blur-[1px] mt-0.5"></div>
+      `;
+      droppedPinMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([selectedPoint.lng, selectedPoint.lat])
+        .addTo(map);
+    } else {
+      droppedPinMarkerRef.current.setLngLat([selectedPoint.lng, selectedPoint.lat]);
+    }
+  }, [selectedPoint]);
+
+  // 🚦 Live Traffic Layer
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -156,7 +189,6 @@ export function MapView({
           data: trafficGeoJSON,
         });
 
-        // Dark casing line
         map.addLayer({
           id: casingLayerId,
           type: 'line',
@@ -173,7 +205,6 @@ export function MapView({
           },
         });
 
-        // Colored traffic flow line: Green (Smooth) / Yellow (Moderate) / Red (Heavy) / Crimson (Standstill)
         map.addLayer({
           id: flowLayerId,
           type: 'line',
@@ -188,12 +219,12 @@ export function MapView({
               'match',
               ['get', 'status'],
               'standstill',
-              '#991b1b', // Dark Crimson (Standstill)
+              '#991b1b',
               'heavy',
-              '#ef4444', // Red (Heavy Jam)
+              '#ef4444',
               'moderate',
-              '#eab308', // Yellow (Moderate)
-              '#22c55e', // Green (Smooth flow)
+              '#eab308',
+              '#22c55e',
             ],
             'line-width': 3.5,
             'line-opacity': 0.85,
@@ -209,7 +240,7 @@ export function MapView({
     }
   }, [incidents, showTrafficLayer]);
 
-  // Zero-Flicker WebGL Persistent Navigation Route Rendering
+  // Persistent Navigation Route Rendering
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

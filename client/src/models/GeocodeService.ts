@@ -23,4 +23,23 @@ export class GeocodeService {
       return [];
     }
   }
+
+  public static async reverseGeocode(lat: number, lng: number): Promise<{ name: string; display_name: string }> {
+    try {
+      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        return {
+          name: json.data.name || 'Selected Location',
+          display_name: json.data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        };
+      }
+    } catch (e) {
+      console.error('[GeocodeService] Reverse geocode error:', e);
+    }
+    return {
+      name: 'Selected Location',
+      display_name: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    };
+  }
 }

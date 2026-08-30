@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Navigation, Activity } from 'lucide-react';
 import { MapView } from '../components/Map/MapView';
 import { NavigationHUD } from '../components/Navigation/NavigationHUD';
@@ -5,6 +6,7 @@ import { RouteSummary } from '../components/UI/RouteSummary';
 import { SearchBar } from '../components/Search/SearchBar';
 import { FavoritesBar } from '../components/Search/FavoritesBar';
 import { SaveFavoriteModal } from '../components/Search/SaveFavoriteModal';
+import { PlaceInfoCard } from '../components/Map/PlaceInfoCard';
 import { ReportModal } from '../components/Incidents/ReportModal';
 import { IncidentDetails } from '../components/Incidents/IncidentDetails';
 import { IncidentApproachAlert } from '../components/Incidents/IncidentApproachAlert';
@@ -14,6 +16,7 @@ import { useMapViewModel } from '../viewmodels/useMapViewModel';
 import { useIncidentViewModel } from '../viewmodels/useIncidentViewModel';
 import { useNavigationViewModel } from '../viewmodels/useNavigationViewModel';
 import { useFavoritesViewModel } from '../viewmodels/useFavoritesViewModel';
+import { GeocodeService } from '../models/GeocodeService';
 import type { Coordinates } from '../models/NavigationModel';
 
 export function MainNavigationView() {
@@ -43,7 +46,42 @@ export function MainNavigationView() {
   const incidentVM = useIncidentViewModel(userCoords, simulatedPosRef.isNavigating);
   const navVM = useNavigationViewModel(userCoords, incidentVM.incidents);
 
-  const favVM = useFavoritesViewModel(navVM.handleSelectDestination);
+  // Selected Dropped Pin State (Google Maps Style)
+  const [selectedPlace, setSelectedPlace] = useState<{
+    lat: number;
+    lng: number;
+    name: string;
+    address: string;
+  } | null>(null);
+
+  const favVM = useFavoritesViewModel((coords) => {
+    setSelectedPlace(null);
+    navVM.handleSelectDestination(coords);
+  });
+
+  // Handle map click: Drop pin & reverse-geocode place card
+  const handleMapClick = useCallback(async (coords: [number, number]) => {
+    const [lng, lat] = coords;
+    setSelectedPlace({
+      lat,
+      lng,
+      name: 'Loading location...',
+      address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    });
+
+    const info = await GeocodeService.reverseGeocode(lat, lng);
+    setSelectedPlace({
+      lat,
+      lng,
+      name: info.name,
+      address: info.display_name,
+    });
+  }, []);
+
+  const handleStartRouteToPlace = (coords: [number, number]) => {
+    setSelectedPlace(null);
+    navVM.handleSelectDestination(coords);
+  };
 
   return (
     <div className={`w-full h-full flex flex-col relative overflow-hidden ${mapVM.theme === 'night' ? 'dark bg-[#121316] text-[#e3e2e6]' : 'bg-[#fdfcff] text-[#121316]'}`}>
@@ -94,10 +132,13 @@ export function MainNavigationView() {
             </button>
           </div>
 
-          {/* Search Bar with Bookmark Action */}
+          {/* Search Bar with Autocomplete Bookmark Action */}
           <div className="w-full">
             <SearchBar
-              onSelectResult={navVM.handleSelectDestination}
+              onSelectResult={(coords) => {
+                setSelectedPlace(null);
+                navVM.handleSelectDestination(coords);
+              }}
               onBookmarkResult={(lat, lng, name, address) => favVM.openSaveModal(lat, lng, name, address)}
             />
           </div>
@@ -108,9 +149,9 @@ export function MainNavigationView() {
               favorites={favVM.favorites}
               onSelectFavorite={favVM.selectFavorite}
               onAddNew={() => {
-                if (userCoords) {
-                  favVM.openSaveModal(userCoords.latitude, userCoords.longitude, 'Current Location');
-                }
+                const lat = userCoords ? userCoords.latitude : 3.139;
+                const lng = userCoords ? userCoords.longitude : 101.6869;
+                favVM.openSaveModal(lat, lng, 'New Favorite');
               }}
             />
           </div>
@@ -204,6 +245,16 @@ export function MainNavigationView() {
         />
       )}
 
+      {/* Google Maps Style Dropped Pin Place Info Card */}
+      {selectedPlace && !navVM.isNavigating && navVM.allRoutes.length === 0 && (
+        <PlaceInfoCard
+          place={selectedPlace}
+          onGetDirections={handleStartRouteToPlace}
+          onSaveFavorite={(lat, lng, name, address) => favVM.openSaveModal(lat, lng, name, address)}
+          onClose={() => setSelectedPlace(null)}
+        />
+      )}
+
       {/* Route Selection Summary Cards */}
       {!navVM.isNavigating && navVM.allRoutes.length > 0 && (
         <RouteSummary
@@ -244,8 +295,8 @@ export function MainNavigationView() {
         />
       )}
 
-      {/* Bottom-Left Map Database Last Update Pill Badge */}
-      <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121316]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-slate-400 shadow-lg">
+      {/* Bottom-Right Map Database Last Update Pill Badge */}
+      <div className="absolute bottom-3 right-3 z-10 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121316]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-slate-400 shadow-lg">
         <span className="w-1.5 h-1.5 rounded-full bg-[#6dd58c] animate-pulse"></span>
         <span>OSM Data: Aug 2026 • Live Sync</span>
       </div>
@@ -262,7 +313,8 @@ export function MainNavigationView() {
           isNavigating={navVM.isNavigating}
           followUser={mapVM.followUser}
           showTrafficLayer={mapVM.showTrafficLayer}
-          onMapClick={navVM.handleSelectDestination}
+          selectedPoint={selectedPlace ? { lat: selectedPlace.lat, lng: selectedPlace.lng } : null}
+          onMapClick={handleMapClick}
           onUserPan={mapVM.handleUserPan}
           onSelectAlternative={navVM.selectRouteIndex}
           onIncidentClick={incidentVM.selectIncident}
