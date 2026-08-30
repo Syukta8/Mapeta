@@ -244,6 +244,12 @@ export function MainNavigationView() {
         />
       )}
 
+      {/* Bottom-Left Map Database Last Update Pill Badge */}
+      <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121316]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-slate-400 shadow-lg">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#6dd58c] animate-pulse"></span>
+        <span>OSM Data: Aug 2026 • Live Sync</span>
+      </div>
+
       {/* WebGL Map Presentation View */}
       <main className="flex-1 w-full h-full relative">
         <MapView
