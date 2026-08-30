@@ -46,7 +46,7 @@ export function MainNavigationView() {
   const incidentVM = useIncidentViewModel(userCoords, simulatedPosRef.isNavigating);
   const navVM = useNavigationViewModel(userCoords, incidentVM.incidents);
 
-  // Selected Dropped Pin State (Google Maps Style)
+  // Selected Dropped Pin State (3-Second Long Press)
   const [selectedPlace, setSelectedPlace] = useState<{
     lat: number;
     lng: number;
@@ -59,8 +59,8 @@ export function MainNavigationView() {
     navVM.handleSelectDestination(coords);
   });
 
-  // Handle map click: Drop pin & reverse-geocode place card
-  const handleMapClick = useCallback(async (coords: [number, number]) => {
+  // Handle map 3-second long-press: Drop pin & reverse-geocode place card
+  const handleLongPressMap = useCallback(async (coords: [number, number]) => {
     const [lng, lat] = coords;
     setSelectedPlace({
       lat,
@@ -245,7 +245,7 @@ export function MainNavigationView() {
         />
       )}
 
-      {/* Google Maps Style Dropped Pin Place Info Card */}
+      {/* Google Maps Style Dropped Pin Place Info Card (Triggered by 3s Long-Press) */}
       {selectedPlace && !navVM.isNavigating && navVM.allRoutes.length === 0 && (
         <PlaceInfoCard
           place={selectedPlace}
@@ -314,7 +314,7 @@ export function MainNavigationView() {
           followUser={mapVM.followUser}
           showTrafficLayer={mapVM.showTrafficLayer}
           selectedPoint={selectedPlace ? { lat: selectedPlace.lat, lng: selectedPlace.lng } : null}
-          onMapClick={handleMapClick}
+          onLongPressMap={handleLongPressMap}
           onUserPan={mapVM.handleUserPan}
           onSelectAlternative={navVM.selectRouteIndex}
           onIncidentClick={incidentVM.selectIncident}

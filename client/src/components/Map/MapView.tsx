@@ -15,7 +15,7 @@ interface MapViewProps {
   followUser: boolean;
   showTrafficLayer?: boolean;
   selectedPoint?: { lat: number; lng: number } | null;
-  onMapClick?: (coords: [number, number]) => void;
+  onLongPressMap?: (coords: [number, number]) => void;
   onUserPan?: () => void;
   onIncidentClick?: (incident: Incident) => void;
   onSelectAlternative?: (index: number) => void;
@@ -32,7 +32,7 @@ export function MapView({
   followUser,
   showTrafficLayer = true,
   selectedPoint = null,
-  onMapClick,
+  onLongPressMap,
   onUserPan,
   onIncidentClick,
   onSelectAlternative,
@@ -43,6 +43,10 @@ export function MapView({
   const droppedPinMarkerRef = useRef<maplibregl.Marker | null>(null);
   const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const lastFitBoundsKeyRef = useRef<string>('');
+
+  // 3-Second Long Press Tracking
+  const longPressTimerRef = useRef<number | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number; lngLat: maplibregl.LngLat } | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -66,23 +70,71 @@ export function MapView({
 
     map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
-    map.on('click', (e) => {
-      if (onMapClick) {
-        onMapClick([e.lngLat.lng, e.lngLat.lat]);
+    const clearLongPress = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      touchStartPosRef.current = null;
+    };
+
+    // Mouse Down / Touch Start for 3-Second Hold
+    map.on('mousedown', (e) => {
+      clearLongPress();
+      touchStartPosRef.current = { x: e.point.x, y: e.point.y, lngLat: e.lngLat };
+      longPressTimerRef.current = window.setTimeout(() => {
+        if (onLongPressMap && touchStartPosRef.current) {
+          onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
+        }
+        clearLongPress();
+      }, 3000); // 3-second long press
+    });
+
+    map.on('touchstart', (e) => {
+      clearLongPress();
+      if (e.points && e.points[0]) {
+        touchStartPosRef.current = { x: e.points[0].x, y: e.points[0].y, lngLat: e.lngLat };
+        longPressTimerRef.current = window.setTimeout(() => {
+          if (onLongPressMap && touchStartPosRef.current) {
+            onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
+          }
+          clearLongPress();
+        }, 3000); // 3-second long press
       }
     });
 
-    map.on('dragstart', () => {
-      if (onUserPan) onUserPan();
+    // If user moves or drags during hold, cancel the long press
+    map.on('mousemove', (e) => {
+      if (touchStartPosRef.current) {
+        const dx = Math.abs(e.point.x - touchStartPosRef.current.x);
+        const dy = Math.abs(e.point.y - touchStartPosRef.current.y);
+        if (dx > 8 || dy > 8) {
+          clearLongPress();
+        }
+      }
     });
 
-    map.on('touchstart', () => {
+    map.on('touchmove', (e) => {
+      if (touchStartPosRef.current && e.points && e.points[0]) {
+        const dx = Math.abs(e.points[0].x - touchStartPosRef.current.x);
+        const dy = Math.abs(e.points[0].y - touchStartPosRef.current.y);
+        if (dx > 8 || dy > 8) {
+          clearLongPress();
+        }
+      }
+    });
+
+    map.on('mouseup', clearLongPress);
+    map.on('touchend', clearLongPress);
+    map.on('dragstart', () => {
+      clearLongPress();
       if (onUserPan) onUserPan();
     });
 
     mapRef.current = map;
 
     return () => {
+      clearLongPress();
       map.remove();
       mapRef.current = null;
     };
@@ -134,7 +186,7 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
-  // 📍 Google Maps Dropped Pin Marker for Map Clicks
+  // 📍 Google Maps Dropped Pin Marker
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -164,13 +216,17 @@ export function MapView({
     }
   }, [selectedPoint]);
 
-  // 🚦 Live Traffic Layer
+  // 🚦 Smooth Route-Aligned & Regional Live Traffic Layer
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const updateTraffic = () => {
-      const trafficGeoJSON = TrafficService.generateLiveTrafficGeoJSON(incidents);
+      // If navigating or route is active, generate high-resolution traffic directly along the route line
+      const trafficGeoJSON = activeRoute
+        ? TrafficService.generateRouteTrafficGeoJSON(activeRoute, incidents)
+        : TrafficService.generateLiveTrafficGeoJSON(incidents);
+
       const sourceId = 'mapeta-traffic-source';
       const casingLayerId = 'mapeta-traffic-casing';
       const flowLayerId = 'mapeta-traffic-flow';
@@ -189,6 +245,7 @@ export function MapView({
           data: trafficGeoJSON,
         });
 
+        // Dark casing line
         map.addLayer({
           id: casingLayerId,
           type: 'line',
@@ -200,11 +257,12 @@ export function MapView({
           },
           paint: {
             'line-color': '#0d0e11',
-            'line-width': 6,
-            'line-opacity': 0.7,
+            'line-width': 7,
+            'line-opacity': 0.8,
           },
         });
 
+        // Segmented live traffic flow line: Green (Smooth) / Yellow (Moderate) / Red (Heavy) / Crimson (Standstill)
         map.addLayer({
           id: flowLayerId,
           type: 'line',
@@ -226,8 +284,8 @@ export function MapView({
               '#eab308',
               '#22c55e',
             ],
-            'line-width': 3.5,
-            'line-opacity': 0.85,
+            'line-width': 4.5,
+            'line-opacity': 0.95,
           },
         });
       }
@@ -238,7 +296,7 @@ export function MapView({
     } else {
       map.once('styledata', updateTraffic);
     }
-  }, [incidents, showTrafficLayer]);
+  }, [activeRoute, incidents, showTrafficLayer]);
 
   // Persistent Navigation Route Rendering
   useEffect(() => {
