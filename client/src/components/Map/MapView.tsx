@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { MAP_STYLES } from '../../styles/mapStyles';
 import type { Incident, RouteInfo } from '../../types/navigation';
+import type { MapViewMode } from '../../viewmodels/useMapViewModel';
 import { TrafficService } from '../../models/TrafficService';
 
 interface MapViewProps {
@@ -13,6 +14,7 @@ interface MapViewProps {
   incidents: Incident[];
   isNavigating: boolean;
   followUser: boolean;
+  viewMode?: MapViewMode;
   showTrafficLayer?: boolean;
   selectedPoint?: { lat: number; lng: number } | null;
   onLongPressMap?: (coords: [number, number]) => void;
@@ -30,6 +32,7 @@ export function MapView({
   incidents,
   isNavigating,
   followUser,
+  viewMode = '3d-heading',
   showTrafficLayer = true,
   selectedPoint = null,
   onLongPressMap,
@@ -58,7 +61,7 @@ export function MapView({
       container: mapContainerRef.current,
       style: theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day,
       center: [initialLng, initialLat],
-      zoom: 13.5,
+      zoom: 14,
       pitch: isNavigating ? 55 : 0,
       bearing: userCoords?.heading || 0,
       dragPan: true,
@@ -78,7 +81,6 @@ export function MapView({
       touchStartPosRef.current = null;
     };
 
-    // Mouse Down / Touch Start for 3-Second Hold
     map.on('mousedown', (e) => {
       clearLongPress();
       touchStartPosRef.current = { x: e.point.x, y: e.point.y, lngLat: e.lngLat };
@@ -87,7 +89,7 @@ export function MapView({
           onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
         }
         clearLongPress();
-      }, 3000); // 3-second long press
+      }, 3000);
     });
 
     map.on('touchstart', (e) => {
@@ -99,18 +101,15 @@ export function MapView({
             onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
           }
           clearLongPress();
-        }, 3000); // 3-second long press
+        }, 3000);
       }
     });
 
-    // If user moves or drags during hold, cancel the long press
     map.on('mousemove', (e) => {
       if (touchStartPosRef.current) {
         const dx = Math.abs(e.point.x - touchStartPosRef.current.x);
         const dy = Math.abs(e.point.y - touchStartPosRef.current.y);
-        if (dx > 8 || dy > 8) {
-          clearLongPress();
-        }
+        if (dx > 8 || dy > 8) clearLongPress();
       }
     });
 
@@ -118,9 +117,7 @@ export function MapView({
       if (touchStartPosRef.current && e.points && e.points[0]) {
         const dx = Math.abs(e.points[0].x - touchStartPosRef.current.x);
         const dy = Math.abs(e.points[0].y - touchStartPosRef.current.y);
-        if (dx > 8 || dy > 8) {
-          clearLongPress();
-        }
+        if (dx > 8 || dy > 8) clearLongPress();
       }
     });
 
@@ -146,7 +143,7 @@ export function MapView({
     mapRef.current.setStyle(targetStyle);
   }, [theme]);
 
-  // Update user position marker and camera follow
+  // Update user position marker and camera follow with 3-Way Perspective
   useEffect(() => {
     if (!mapRef.current || !userCoords) return;
 
@@ -176,15 +173,29 @@ export function MapView({
     }
 
     if (followUser && mapRef.current) {
+      let targetPitch = 0;
+      let targetBearing = 0;
+
+      if (viewMode === '3d-heading') {
+        targetPitch = isNavigating ? 55 : 45;
+        targetBearing = heading !== null ? heading : mapRef.current.getBearing();
+      } else if (viewMode === '2d-north') {
+        targetPitch = 0;
+        targetBearing = 0; // Always North up
+      } else if (viewMode === '2d-heading') {
+        targetPitch = 0;
+        targetBearing = heading !== null ? heading : mapRef.current.getBearing();
+      }
+
       mapRef.current.easeTo({
         center: [longitude, latitude],
-        zoom: isNavigating ? 17 : mapRef.current.getZoom(),
-        pitch: isNavigating ? 55 : 0,
-        bearing: isNavigating && heading !== null ? heading : mapRef.current.getBearing(),
-        duration: 800,
+        zoom: isNavigating ? 17 : 15,
+        pitch: targetPitch,
+        bearing: targetBearing,
+        duration: 700,
       });
     }
-  }, [userCoords, followUser, isNavigating]);
+  }, [userCoords, followUser, isNavigating, viewMode]);
 
   // 📍 Google Maps Dropped Pin Marker
   useEffect(() => {
@@ -222,7 +233,6 @@ export function MapView({
     if (!map) return;
 
     const updateTraffic = () => {
-      // If navigating or route is active, generate high-resolution traffic directly along the route line
       const trafficGeoJSON = activeRoute
         ? TrafficService.generateRouteTrafficGeoJSON(activeRoute, incidents)
         : TrafficService.generateLiveTrafficGeoJSON(incidents);
@@ -245,7 +255,6 @@ export function MapView({
           data: trafficGeoJSON,
         });
 
-        // Dark casing line
         map.addLayer({
           id: casingLayerId,
           type: 'line',
@@ -262,7 +271,6 @@ export function MapView({
           },
         });
 
-        // Segmented live traffic flow line: Green (Smooth) / Yellow (Moderate) / Red (Heavy) / Crimson (Standstill)
         map.addLayer({
           id: flowLayerId,
           type: 'line',

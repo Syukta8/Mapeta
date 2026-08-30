@@ -59,7 +59,6 @@ export function MainNavigationView() {
     navVM.handleSelectDestination(coords);
   });
 
-  // Handle map 3-second long-press: Drop pin & reverse-geocode place card
   const handleLongPressMap = useCallback(async (coords: [number, number]) => {
     const [lng, lat] = coords;
     setSelectedPlace({
@@ -81,6 +80,12 @@ export function MainNavigationView() {
   const handleStartRouteToPlace = (coords: [number, number]) => {
     setSelectedPlace(null);
     navVM.handleSelectDestination(coords);
+  };
+
+  const getViewModeLabel = () => {
+    if (mapVM.viewMode === '3d-heading') return '3D Heading';
+    if (mapVM.viewMode === '2d-north') return '2D North';
+    return '2D Heading';
   };
 
   return (
@@ -168,6 +173,28 @@ export function MainNavigationView() {
           <Plus className="w-5 h-5 stroke-[2.5]" />
         </button>
 
+        {/* 3-Way Perspective View Mode Toggle (3D Head-Up / 2D North-Up / 2D Head-Up) */}
+        <button
+          onClick={mapVM.cycleViewMode}
+          className="pixel-card p-3 rounded-full shadow-2xl transition-all border border-white/10 hover:border-[#a8c7fa]/50 text-white active:scale-95 flex items-center justify-center group"
+          title={`Switch Perspective Mode (Current: ${getViewModeLabel()})`}
+        >
+          <div className="relative flex items-center justify-center">
+            <Compass
+              className={`w-5 h-5 transition-transform duration-300 ${
+                mapVM.viewMode === '3d-heading'
+                  ? 'text-[#a8c7fa] rotate-45'
+                  : mapVM.viewMode === '2d-north'
+                  ? 'text-red-400 rotate-0'
+                  : 'text-amber-400 rotate-90'
+              }`}
+            />
+            <span className="absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#1b1c20] text-[9px] font-extrabold px-2 py-0.5 rounded-full border border-white/10 whitespace-nowrap">
+              {getViewModeLabel()}
+            </span>
+          </div>
+        </button>
+
         {/* Floating Live Traffic Layer Button */}
         <button
           onClick={mapVM.toggleTrafficLayer}
@@ -181,6 +208,7 @@ export function MainNavigationView() {
           <Activity className="w-4 h-4" />
         </button>
 
+        {/* GPS Drive Simulation (Play / Stop) */}
         {navVM.activeRoute && (
           <button
             onClick={navVM.isSimulatingDrive ? navVM.stopDriveSimulation : navVM.startDriveSimulation}
@@ -189,7 +217,7 @@ export function MainNavigationView() {
                 ? 'bg-amber-500/30 text-amber-300 border-amber-400 animate-pulse'
                 : 'text-white border-white/10 hover:text-[#a8c7fa]'
             }`}
-            title={navVM.isSimulatingDrive ? 'Stop Drive Simulation' : 'Simulate GPS Drive'}
+            title={navVM.isSimulatingDrive ? 'Stop Virtual GPS Drive Simulation' : 'Play Virtual GPS Drive Simulation'}
           >
             {navVM.isSimulatingDrive ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
           </button>
@@ -202,21 +230,9 @@ export function MainNavigationView() {
               ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]'
               : 'text-white border-white/10 hover:text-[#a8c7fa]'
           }`}
-          title="Recenter Camera"
+          title="Recenter Camera on Vehicle"
         >
           <Crosshair className="w-4 h-4" />
-        </button>
-
-        <button
-          onClick={mapVM.toggle3DPerspective}
-          className={`pixel-card p-3 rounded-full shadow-2xl transition-all border ${
-            mapVM.is3DPerspective
-              ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]'
-              : 'text-white border-white/10 hover:text-[#a8c7fa]'
-          }`}
-          title="Toggle 3D Perspective"
-        >
-          <Compass className="w-4 h-4" />
         </button>
       </div>
 
@@ -312,6 +328,7 @@ export function MainNavigationView() {
           incidents={incidentVM.incidents}
           isNavigating={navVM.isNavigating}
           followUser={mapVM.followUser}
+          viewMode={mapVM.viewMode}
           showTrafficLayer={mapVM.showTrafficLayer}
           selectedPoint={selectedPlace ? { lat: selectedPlace.lat, lng: selectedPlace.lng } : null}
           onLongPressMap={handleLongPressMap}

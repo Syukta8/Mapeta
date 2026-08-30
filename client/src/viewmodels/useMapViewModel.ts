@@ -1,17 +1,23 @@
 import { useState, useCallback } from 'react';
 
+export type MapViewMode = '3d-heading' | '2d-north' | '2d-heading';
+
 export function useMapViewModel() {
   const [theme, setTheme] = useState<'day' | 'night'>('night');
   const [followUser, setFollowUser] = useState<boolean>(true);
-  const [is3DPerspective, setIs3DPerspective] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<MapViewMode>('3d-heading');
   const [showTrafficLayer, setShowTrafficLayer] = useState<boolean>(true);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'night' ? 'day' : 'night'));
   }, []);
 
-  const toggle3DPerspective = useCallback(() => {
-    setIs3DPerspective((prev) => !prev);
+  const cycleViewMode = useCallback(() => {
+    setViewMode((prev) => {
+      if (prev === '3d-heading') return '2d-north';
+      if (prev === '2d-north') return '2d-heading';
+      return '3d-heading';
+    });
   }, []);
 
   const toggleTrafficLayer = useCallback(() => {
@@ -29,10 +35,10 @@ export function useMapViewModel() {
   return {
     theme,
     followUser,
-    is3DPerspective,
+    viewMode,
     showTrafficLayer,
     toggleTheme,
-    toggle3DPerspective,
+    cycleViewMode,
     toggleTrafficLayer,
     recenterCamera,
     setFollowUser,
