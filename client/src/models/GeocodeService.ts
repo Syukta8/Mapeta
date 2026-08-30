@@ -9,24 +9,44 @@ export interface SearchResult {
 }
 
 export class GeocodeService {
+  private static abortController: AbortController | null = null;
+
   public static async search(query: string, limit: number = 6): Promise<SearchResult[]> {
-    if (!query.trim()) return [];
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
     try {
-      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+      const timeoutId = setTimeout(() => this.abortController?.abort(), 5000);
+      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`, {
+        signal: this.abortController.signal,
+      });
+      clearTimeout(timeoutId);
+
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         return json.data;
       }
       return [];
-    } catch (err) {
-      console.error('[GeocodeService] Search error:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('[GeocodeService] Search error:', err);
+      }
       return [];
     }
   }
 
   public static async reverseGeocode(lat: number, lng: number): Promise<{ name: string; display_name: string }> {
     try {
-      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       const json = await res.json();
       if (json.success && json.data) {
         return {

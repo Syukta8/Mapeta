@@ -15,14 +15,12 @@ export function useNavigationViewModel(
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [isRerouting, setIsRerouting] = useState<boolean>(false);
 
-  // GPS Drive Simulation state
   const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
   const [simulatedPos, setSimulatedPos] = useState<{ lat: number; lng: number; heading: number; speedKmh: number } | null>(null);
   const simIntervalRef = useRef<number | null>(null);
 
   const activeRoute = allRoutes[selectedRouteIndex] || null;
 
-  // Calculate Quad-Corridor Routes
   const calculateRoute = useCallback(
     async (
       originCoords: [number, number],
@@ -52,7 +50,6 @@ export function useNavigationViewModel(
     [selectedProfile, incidents]
   );
 
-  // Automatic Re-routing Handler
   const handleAutoReroute = useCallback(async () => {
     if (!destination || !userCoords) return;
     setIsRerouting(true);
@@ -74,7 +71,6 @@ export function useNavigationViewModel(
     }
   }, [destination, userCoords, selectedProfile, incidents]);
 
-  // Hook up navigation turn engine with auto-reroute callback
   const nav = useNavigation(activeRoute, userCoords, isNavigating, handleAutoReroute);
 
   const handleSelectDestination = useCallback(
@@ -180,7 +176,9 @@ export function useNavigationViewModel(
     simulatedPos,
     navStep: nav.currentStep,
     nextStep: nav.nextStep,
+    nextNextStep: nav.nextNextStep,
     distanceToNextStep: nav.distanceToNextStep,
+    stepInitialDistance: nav.stepInitialDistance,
     remainingDistance: nav.remainingDistance,
     remainingDuration: nav.remainingDuration,
     calculateRoute,

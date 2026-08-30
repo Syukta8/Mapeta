@@ -245,12 +245,14 @@ export function MainNavigationView() {
         />
       )}
 
-      {/* Navigation Turn HUD Banner */}
+      {/* Navigation Turn HUD Banner with Next-Turn Progress Bar */}
       {navVM.isNavigating && navVM.activeRoute && (
         <NavigationHUD
           currentStep={navVM.navStep}
           nextStep={navVM.nextStep}
+          nextNextStep={navVM.nextNextStep}
           distanceToNextStep={navVM.distanceToNextStep}
+          stepInitialDistance={navVM.stepInitialDistance}
           remainingDistance={navVM.remainingDistance}
           remainingDuration={navVM.remainingDuration}
           currentSpeedKmh={currentSpeed}
@@ -277,8 +279,8 @@ export function MainNavigationView() {
         <RouteSummary
           allRoutes={navVM.allRoutes}
           selectedRouteIndex={navVM.selectedRouteIndex}
-          onSelectRouteIndex={navVM.selectRouteIndex}
           selectedProfile={navVM.selectedProfile}
+          onSelectRouteIndex={navVM.selectRouteIndex}
           onSelectProfile={navVM.selectProfile}
           onStartNavigation={navVM.startNavigation}
           onClose={() => navVM.stopNavigation()}

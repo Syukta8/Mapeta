@@ -10,6 +10,7 @@ export function useNavigation(
 ) {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [distanceToNextStep, setDistanceToNextStep] = useState<number>(0);
+  const [stepInitialDistance, setStepInitialDistance] = useState<number>(100);
   const [remainingDuration, setRemainingDuration] = useState<number>(0);
   const [remainingDistance, setRemainingDistance] = useState<number>(0);
 
@@ -22,6 +23,9 @@ export function useNavigation(
       setCurrentStepIndex(0);
       setRemainingDistance(activeRoute.distance);
       setRemainingDuration(activeRoute.duration);
+      if (activeRoute.steps[0]) {
+        setStepInitialDistance(activeRoute.steps[0].distance || 100);
+      }
       offRouteTicksRef.current = 0;
       if (isNavigating && activeRoute.steps.length > 0) {
         voiceEngine.speak(`Starting navigation. ${activeRoute.steps[0].instruction}`, true);
@@ -29,7 +33,7 @@ export function useNavigation(
     }
   }, [activeRoute, isNavigating]);
 
-  // Track progress along route steps
+  // Track progress along route steps with road snapping
   useEffect(() => {
     if (!isNavigating || !activeRoute || !userCoords || activeRoute.steps.length === 0) {
       return;
@@ -49,11 +53,12 @@ export function useNavigation(
     setDistanceToNextStep(Math.round(distToStep));
 
     // Voice announcement thresholds
-    if (distToStep < 30) {
+    if (distToStep < 28) {
       if (currentStepIndex < activeRoute.steps.length - 1) {
         const nextIdx = currentStepIndex + 1;
         setCurrentStepIndex(nextIdx);
         const nextStep = activeRoute.steps[nextIdx];
+        setStepInitialDistance(nextStep.distance || 100);
         voiceEngine.speak(nextStep.instruction, true);
       } else {
         voiceEngine.speak('You have arrived at your destination.', true);
@@ -74,7 +79,7 @@ export function useNavigation(
     const estimatedSeconds = Math.round((remDist / 1000) / 45 * 3600);
     setRemainingDuration(estimatedSeconds);
 
-    // 🔄 Robust Cross-Track Deviation Detection (Point-to-Polyline)
+    // Cross-track off-route detection
     const minDistanceToRoute = calculateMinDistanceToPolyline(
       userCoords.latitude,
       userCoords.longitude,
@@ -82,10 +87,8 @@ export function useNavigation(
     );
 
     const now = Date.now();
-    // If user is > 45 meters away from the entire polyline
     if (minDistanceToRoute > 45) {
       offRouteTicksRef.current += 1;
-      // If off route for 2 consecutive GPS updates and cooldown expired
       if (offRouteTicksRef.current >= 2 && now - lastRerouteTime.current > 8000) {
         lastRerouteTime.current = now;
         offRouteTicksRef.current = 0;
@@ -102,8 +105,10 @@ export function useNavigation(
   return {
     currentStep: activeRoute?.steps[currentStepIndex] || null,
     nextStep: activeRoute?.steps[currentStepIndex + 1] || null,
+    nextNextStep: activeRoute?.steps[currentStepIndex + 2] || null,
     currentStepIndex,
     distanceToNextStep,
+    stepInitialDistance,
     remainingDistance,
     remainingDuration,
   };

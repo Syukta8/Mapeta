@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, X, Loader2, Star } from 'lucide-react';
+import { Search, MapPin, X, Loader2, Star, Fuel, ShoppingBag, Hospital, Plane, Train, Landmark } from 'lucide-react';
 import { GeocodeService, type SearchResult } from '../../models/GeocodeService';
 
 interface SearchBarProps {
@@ -12,56 +12,80 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const debounceTimerRef = useRef<number | null>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = query.trim();
+    if (!trimmed) {
       setResults([]);
-      setIsOpen(false);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-
-    debounceTimerRef.current = window.setTimeout(async () => {
-      const items = await GeocodeService.search(query, 6);
-      setResults(items);
+    debounceRef.current = window.setTimeout(async () => {
+      const data = await GeocodeService.search(trimmed, 6);
+      setResults(data);
       setIsLoading(false);
-      setIsOpen(items.length > 0);
-    }, 350);
+      setIsOpen(data.length > 0);
+    }, 250);
 
     return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query]);
 
   // Click outside listener
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
-    }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (item: SearchResult) => {
-    const lat = Number(item.lat);
-    const lng = Number(item.lon || item.lng);
-    onSelectResult([lng, lat]);
+  const handleSelect = (result: SearchResult) => {
+    const lat = Number(result.lat);
+    const lng = Number(result.lng || result.lon || 0);
+
     setIsOpen(false);
-    setQuery(item.name || item.display_name?.split(',')[0] || query);
+    setQuery(result.name || result.display_name?.split(',')[0] || '');
+    onSelectResult([lng, lat]);
+  };
+
+  const getCategoryIcon = (category?: string, name?: string) => {
+    const text = `${category || ''} ${name || ''}`.toLowerCase();
+    if (text.includes('petrol') || text.includes('shell') || text.includes('petronas') || text.includes('caltex')) {
+      return <Fuel className="w-3.5 h-3.5 text-amber-400" />;
+    }
+    if (text.includes('mall') || text.includes('shopping') || text.includes('pavilion') || text.includes('mid valley')) {
+      return <ShoppingBag className="w-3.5 h-3.5 text-pink-400" />;
+    }
+    if (text.includes('hospital') || text.includes('klinik') || text.includes('medical')) {
+      return <Hospital className="w-3.5 h-3.5 text-red-400" />;
+    }
+    if (text.includes('airport') || text.includes('klia') || text.includes('subang')) {
+      return <Plane className="w-3.5 h-3.5 text-sky-400" />;
+    }
+    if (text.includes('lrt') || text.includes('mrt') || text.includes('station') || text.includes('ktm')) {
+      return <Train className="w-3.5 h-3.5 text-emerald-400" />;
+    }
+    if (text.includes('bank') || text.includes('menara') || text.includes('tower')) {
+      return <Landmark className="w-3.5 h-3.5 text-indigo-400" />;
+    }
+    return <MapPin className="w-3.5 h-3.5 text-[#a8c7fa]" />;
   };
 
   return (
-    <div ref={wrapperRef} className="relative w-full pointer-events-auto">
-      {/* Pixel Search Input Pill */}
-      <div className="pixel-card flex items-center px-3.5 py-2.5 rounded-full shadow-2xl border border-white/10 focus-within:border-[#a8c7fa]/60 focus-within:ring-2 focus-within:ring-[#a8c7fa]/20 transition-all">
-        <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2.5" />
+    <div ref={containerRef} className="relative w-full pointer-events-auto">
+      {/* Search Input Bar */}
+      <div className="pixel-card rounded-full p-1.5 pl-4 pr-2 shadow-2xl flex items-center gap-2 border border-white/10 bg-[#1b1c20]/95 backdrop-blur-xl">
+        <Search className="w-4 h-4 text-slate-400 shrink-0" />
         <input
           type="text"
           value={query}
@@ -69,10 +93,12 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          placeholder="Where to? Search destination..."
-          className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none"
+          placeholder="Search places, addresses, expressways in Malaysia..."
+          className="bg-transparent border-none outline-none text-xs text-white placeholder-slate-400 flex-1 w-full font-medium"
         />
-        {isLoading && <Loader2 className="w-3.5 h-3.5 text-[#a8c7fa] animate-spin shrink-0 ml-1.5" />}
+
+        {isLoading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0" />}
+
         {query && !isLoading && (
           <button
             onClick={() => {
@@ -80,49 +106,55 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
               setResults([]);
               setIsOpen(false);
             }}
-            className="p-1 text-slate-400 hover:text-white transition-colors"
+            className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Autocomplete Dropdown List */}
+      {/* Autocomplete Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 pixel-card rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-50 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-          {results.map((item, idx) => {
-            const title = item.name || item.display_name?.split(',')[0] || 'Unknown Place';
-            const subtitle = item.display_name?.split(',').slice(1, 3).join(',') || '';
-            const lat = Number(item.lat);
-            const lng = Number(item.lon || item.lng);
+        <div className="absolute top-full left-0 right-0 mt-2 pixel-card rounded-2xl shadow-2xl border border-white/15 overflow-hidden z-50 divide-y divide-white/5 bg-[#1b1c20]/98 backdrop-blur-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+          {results.map((result, idx) => {
+            const displayName = result.display_name || result.name || '';
+            const title = result.name || displayName.split(',')[0];
+            const address = displayName.replace(title, '').replace(/^,\s*/, '');
+            const latNum = Number(result.lat);
+            const lngNum = Number(result.lng || result.lon || 0);
 
             return (
               <div
                 key={idx}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-white/5 border-b border-white/5 last:border-0 text-left transition-colors cursor-pointer group"
-                onClick={() => handleSelect(item)}
+                className="flex items-center justify-between p-3 hover:bg-white/5 cursor-pointer transition-colors group"
+                onClick={() => handleSelect(result)}
               >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
-                  <div className="w-7 h-7 rounded-full bg-[#212226] border border-white/10 flex items-center justify-center shrink-0 text-slate-300 group-hover:text-[#a8c7fa]">
-                    <MapPin className="w-3.5 h-3.5" />
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0 mt-0.5 group-hover:border-[#a8c7fa]/40 transition-colors">
+                    {getCategoryIcon(result.category, title)}
                   </div>
-                  <div className="flex flex-col truncate">
-                    <span className="text-xs font-bold text-white truncate">{title}</span>
-                    {subtitle && <span className="text-[10px] text-slate-400 truncate">{subtitle}</span>}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-white leading-tight truncate group-hover:text-[#a8c7fa] transition-colors">
+                      {title}
+                    </span>
+                    {address && (
+                      <span className="text-[10px] text-slate-400 leading-snug truncate mt-0.5">
+                        {address}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {onBookmarkResult && (
                   <button
-                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onBookmarkResult(lat, lng, title, subtitle);
+                      onBookmarkResult(latNum, lngNum, title, displayName);
                     }}
-                    className="p-1.5 rounded-full text-slate-400 hover:text-yellow-300 hover:bg-white/10 transition-all shrink-0"
-                    title="Save to Favorites"
+                    className="p-2 rounded-full text-slate-400 hover:text-yellow-300 hover:bg-yellow-400/10 transition-colors shrink-0 ml-1.5"
+                    title="Save to Favorite Places"
                   >
-                    <Star className="w-3.5 h-3.5" />
+                    <Star className="w-4 h-4 hover:fill-yellow-400" />
                   </button>
                 )}
               </div>

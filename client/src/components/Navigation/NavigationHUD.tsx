@@ -1,10 +1,12 @@
-import { ArrowUp, ArrowRight, ArrowLeft, ArrowUpRight, ArrowUpLeft, RotateCcw, X, Layers, RefreshCw } from 'lucide-react';
+import { ArrowUp, ArrowRight, ArrowLeft, ArrowUpRight, ArrowUpLeft, RotateCcw, X, Layers, RefreshCw, CornerUpRight } from 'lucide-react';
 import type { RouteStep, RouteInfo } from '../../types/navigation';
 
 interface NavigationHUDProps {
   currentStep: RouteStep | null;
   nextStep: RouteStep | null;
+  nextNextStep?: RouteStep | null;
   distanceToNextStep: number;
+  stepInitialDistance?: number;
   remainingDistance: number;
   remainingDuration: number;
   currentSpeedKmh: number;
@@ -18,7 +20,9 @@ interface NavigationHUDProps {
 export function NavigationHUD({
   currentStep,
   nextStep,
+  nextNextStep,
   distanceToNextStep,
+  stepInitialDistance = 200,
   remainingDistance,
   remainingDuration,
   currentSpeedKmh,
@@ -55,45 +59,67 @@ export function NavigationHUD({
     return `${mins} min`;
   };
 
+  // Calculate approach progress (0% -> 100% as you reach 0 meters)
+  const progressPercent = Math.max(0, Math.min(100, (1 - distanceToNextStep / Math.max(100, stepInitialDistance)) * 100));
+
   return (
-    <div className="absolute inset-x-0 top-0 z-30 pointer-events-none flex flex-col items-center p-3 sm:p-4 gap-3 max-w-xl mx-auto">
+    <div className="absolute inset-x-0 top-0 z-30 pointer-events-none flex flex-col items-center p-3 sm:p-4 gap-2.5 max-w-xl mx-auto">
       
       {/* 🔄 Recalculating Route Visual Banner */}
       {isRerouting && (
-        <div className="w-full bg-[#1b1c20]/95 backdrop-blur-xl border border-amber-400/50 rounded-2xl p-3 shadow-2xl flex items-center justify-center gap-2.5 animate-pulse text-amber-300 pointer-events-auto">
+        <div className="w-full bg-[#1b1c20]/98 backdrop-blur-xl border border-amber-400/50 rounded-2xl p-3 shadow-2xl flex items-center justify-center gap-2.5 animate-pulse text-amber-300 pointer-events-auto">
           <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
           <span className="text-xs font-black tracking-wide uppercase">Recalculating Fastest Route...</span>
         </div>
       )}
 
       {/* Top Turn Maneuver Card */}
-      <div className="w-full pixel-card rounded-3xl p-4 shadow-2xl flex items-center justify-between border border-white/10 pointer-events-auto bg-[#1b1c20]/95 backdrop-blur-xl">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-14 h-14 rounded-2xl bg-[#0b57d0] border border-white/20 flex items-center justify-center shrink-0 shadow-lg">
-            {getManeuverIcon(currentStep?.maneuverType || 'straight', currentStep?.modifier)}
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-2xl font-black tracking-tight text-white leading-none">
-              {formatDistance(distanceToNextStep)}
-            </span>
-            <span className="text-xs font-bold text-slate-300 leading-snug truncate mt-1">
-              {currentStep?.instruction || 'Follow road'}
-            </span>
-            {nextStep && (
-              <span className="text-[10px] text-slate-400 truncate mt-0.5">
-                Then {nextStep.instruction}
-              </span>
-            )}
-          </div>
+      <div className="w-full pixel-card rounded-3xl p-4 shadow-2xl flex flex-col border border-white/10 pointer-events-auto bg-[#1b1c20]/95 backdrop-blur-xl relative overflow-hidden">
+        
+        {/* Dynamic Approach Progress Bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5">
+          <div
+            className="h-full bg-gradient-to-r from-[#0b57d0] to-[#6dd58c] transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
 
-        <button
-          onClick={onStopNavigation}
-          className="p-2.5 rounded-full bg-[#212226] text-slate-400 hover:text-white border border-white/10 active:scale-95 transition-all shadow-md shrink-0 ml-2"
-          title="Exit Navigation"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-[#0b57d0] border border-white/20 flex items-center justify-center shrink-0 shadow-lg">
+              {getManeuverIcon(currentStep?.maneuverType || 'straight', currentStep?.modifier)}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-2xl font-black tracking-tight text-white leading-none">
+                {formatDistance(distanceToNextStep)}
+              </span>
+              <span className="text-xs font-bold text-slate-200 leading-snug truncate mt-1">
+                {currentStep?.instruction || 'Follow road'}
+              </span>
+              {nextStep && (
+                <span className="text-[10px] text-slate-400 truncate mt-0.5">
+                  Then {nextStep.instruction}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onStopNavigation}
+            className="p-2.5 rounded-full bg-[#212226] text-slate-400 hover:text-white border border-white/10 active:scale-95 transition-all shadow-md shrink-0 ml-2"
+            title="Exit Navigation"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Secondary Upcoming Maneuver Pill (If available) */}
+        {nextNextStep && (
+          <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+            <CornerUpRight className="w-3 h-3 text-[#a8c7fa]" />
+            <span className="truncate">After that: {nextNextStep.instruction}</span>
+          </div>
+        )}
       </div>
 
       {/* In-Navigation Multi-Route Switcher */}
