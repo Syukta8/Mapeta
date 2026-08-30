@@ -23,10 +23,7 @@ function getLocalIPs() {
 }
 
 console.clear();
-console.log('========================================================================');
-console.log('         ✦ MAPETA -- SELF-HOSTED GPS NAVIGATION ENGINE ✦                ');
-console.log('              Minimalist Genshin Impact Celestia Theme                  ');
-console.log('========================================================================\n');
+console.log('Mapeta launch\n');
 
 // 2. Start Backend Node Server
 console.log('[1/2] Starting Mapeta Backend Server (Express + SQLite + WebSockets)...');
