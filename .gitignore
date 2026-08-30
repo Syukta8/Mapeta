@@ -18,3 +18,14 @@ bin
 .vscode
 .idea
 .DS_Store
+
+
+# Offline Map Datasets & PMTiles (DO NOT COMMIT)
+*.pmtiles
+*.mbtiles
+*.pbf
+*.osm
+*.osm.pbf
+server/data/
+offline_maps/
+client/public/tiles/
