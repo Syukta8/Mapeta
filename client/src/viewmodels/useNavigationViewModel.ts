@@ -1,66 +1,105 @@
 import { useState, useCallback, useRef } from 'react';
-import type { RouteInfo, TravelProfile, Coordinates } from '../models/NavigationModel';
-import type { Incident } from '../models/IncidentModel';
 import { RouteService } from '../models/RouteService';
 import { useNavigation } from '../hooks/useNavigation';
-import { useWakeLock } from '../hooks/useWakeLock';
+import type { RouteInfo, Coordinates, TravelProfile } from '../models/NavigationModel';
+import type { Incident } from '../models/IncidentModel';
 
 export function useNavigationViewModel(
   userCoords: Coordinates | null,
-  incidents: Incident[]
+  incidents: Incident[] = []
 ) {
   const [allRoutes, setAllRoutes] = useState<RouteInfo[]>([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
   const [selectedProfile, setSelectedProfile] = useState<TravelProfile>('driving');
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
-  const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
+  const [isRerouting, setIsRerouting] = useState<boolean>(false);
 
+  // GPS Drive Simulation state
+  const [isSimulatingDrive, setIsSimulatingDrive] = useState<boolean>(false);
   const [simulatedPos, setSimulatedPos] = useState<{ lat: number; lng: number; heading: number; speedKmh: number } | null>(null);
   const simIntervalRef = useRef<number | null>(null);
 
   const activeRoute = allRoutes[selectedRouteIndex] || null;
 
-  useWakeLock(isNavigating);
+  // Calculate Quad-Corridor Routes
+  const calculateRoute = useCallback(
+    async (
+      originCoords: [number, number],
+      destCoords: [number, number],
+      profile: TravelProfile = selectedProfile
+    ) => {
+      try {
+        const routes = await RouteService.fetchRoutes(
+          originCoords,
+          destCoords,
+          profile,
+          incidents
+        );
 
-  const calculateRoute = useCallback(async (
-    start: [number, number],
-    end: [number, number],
-    profile: TravelProfile = selectedProfile
-  ) => {
-    const routes = await RouteService.fetchRoutes(start, end, profile, incidents);
-    setAllRoutes(routes);
-    setSelectedRouteIndex(0);
-  }, [selectedProfile, incidents]);
-
-  // Turn-by-turn navigation progression hook
-  const nav = useNavigation(
-    activeRoute,
-    userCoords,
-    isNavigating,
-    () => {
-      if (destination && userCoords) {
-        calculateRoute([userCoords.longitude, userCoords.latitude], destination, selectedProfile);
+        if (routes && routes.length > 0) {
+          setAllRoutes(routes);
+          setSelectedRouteIndex(0);
+          setDestination(destCoords);
+          return routes;
+        }
+        return [];
+      } catch (err) {
+        console.error('[useNavigationViewModel] calculateRoute error:', err);
+        return [];
       }
-    }
+    },
+    [selectedProfile, incidents]
   );
 
-  const handleSelectDestination = useCallback((coords: [number, number]) => {
-    setDestination(coords);
-    const startLng = userCoords ? userCoords.longitude : 101.6932;
-    const startLat = userCoords ? userCoords.latitude : 3.1408;
-    calculateRoute([startLng, startLat], coords, selectedProfile);
-  }, [userCoords, selectedProfile, calculateRoute]);
-
-  const selectProfile = useCallback((profile: TravelProfile) => {
-    setSelectedProfile(profile);
-    if (destination && userCoords) {
-      calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile);
+  // Automatic Re-routing Handler
+  const handleAutoReroute = useCallback(async () => {
+    if (!destination || !userCoords) return;
+    setIsRerouting(true);
+    try {
+      const routes = await RouteService.fetchRoutes(
+        [userCoords.longitude, userCoords.latitude],
+        destination,
+        selectedProfile,
+        incidents
+      );
+      if (routes && routes.length > 0) {
+        setAllRoutes(routes);
+        setSelectedRouteIndex(0);
+      }
+    } catch (e) {
+      console.error('[AutoReroute] Failed to recalculate route:', e);
+    } finally {
+      setIsRerouting(false);
     }
-  }, [destination, userCoords, calculateRoute]);
+  }, [destination, userCoords, selectedProfile, incidents]);
 
-  const selectRouteIndex = useCallback((idx: number) => {
-    setSelectedRouteIndex(idx);
+  // Hook up navigation turn engine with auto-reroute callback
+  const nav = useNavigation(activeRoute, userCoords, isNavigating, handleAutoReroute);
+
+  const handleSelectDestination = useCallback(
+    async (destCoords: [number, number]) => {
+      const origin: [number, number] = userCoords
+        ? [userCoords.longitude, userCoords.latitude]
+        : [101.6932, 3.1408];
+
+      await calculateRoute(origin, destCoords, selectedProfile);
+    },
+    [userCoords, selectedProfile, calculateRoute]
+  );
+
+  const selectProfile = useCallback(
+    (profile: TravelProfile) => {
+      setSelectedProfile(profile);
+      if (destination && userCoords) {
+        calculateRoute([userCoords.longitude, userCoords.latitude], destination, profile);
+      }
+    },
+    [destination, userCoords, calculateRoute]
+  );
+
+  const selectRouteIndex = useCallback((index: number) => {
+    setSelectedRouteIndex(index);
   }, []);
 
   const startNavigation = useCallback(() => {
@@ -69,6 +108,8 @@ export function useNavigationViewModel(
 
   const stopNavigation = useCallback(() => {
     setIsNavigating(false);
+    setIsSimulatingDrive(false);
+    setIsRerouting(false);
     setAllRoutes([]);
     setSelectedRouteIndex(0);
     setDestination(null);
@@ -76,7 +117,6 @@ export function useNavigationViewModel(
       clearInterval(simIntervalRef.current);
       simIntervalRef.current = null;
     }
-    setIsSimulatingDrive(false);
     setSimulatedPos(null);
   }, []);
 
@@ -135,6 +175,7 @@ export function useNavigationViewModel(
     selectedProfile,
     destination,
     isNavigating,
+    isRerouting,
     isSimulatingDrive,
     simulatedPos,
     navStep: nav.currentStep,

@@ -173,7 +173,7 @@ export function MainNavigationView() {
           <Plus className="w-5 h-5 stroke-[2.5]" />
         </button>
 
-        {/* 3-Way Perspective View Mode Toggle (3D Head-Up / 2D North-Up / 2D Head-Up) */}
+        {/* 3-Way Perspective View Mode Toggle */}
         <button
           onClick={mapVM.cycleViewMode}
           className="pixel-card p-3 rounded-full shadow-2xl transition-all border border-white/10 hover:border-[#a8c7fa]/50 text-white active:scale-95 flex items-center justify-center group"
@@ -256,6 +256,7 @@ export function MainNavigationView() {
           currentSpeedKmh={currentSpeed}
           allRoutes={navVM.allRoutes}
           selectedRouteIndex={navVM.selectedRouteIndex}
+          isRerouting={navVM.isRerouting}
           onSelectRouteIndex={navVM.selectRouteIndex}
           onStopNavigation={navVM.stopNavigation}
         />
