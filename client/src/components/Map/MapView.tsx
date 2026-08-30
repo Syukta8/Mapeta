@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { MAP_STYLES } from '../../styles/mapStyles';
 import type { Incident, RouteInfo } from '../../types/navigation';
 import type { MapViewMode } from '../../viewmodels/useMapViewModel';
-import { TrafficService } from '../../models/TrafficService';
+import { useTrafficLayer } from './hooks/useTrafficLayer';
+import { useRoutePolyline } from './hooks/useRoutePolyline';
+import { useIncidentMarkers } from './hooks/useIncidentMarkers';
 
 interface MapViewProps {
   theme: 'day' | 'night';
@@ -41,23 +43,18 @@ export function MapView({
   onSelectAlternative,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const [map, setMap] = useState<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const droppedPinMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const incidentMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const lastFitBoundsKeyRef = useRef<string>('');
 
-  // 3-Second Long Press Tracking
-  const longPressTimerRef = useRef<number | null>(null);
-  const touchStartPosRef = useRef<{ x: number; y: number; lngLat: maplibregl.LngLat } | null>(null);
-
+  // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     const initialLng = userCoords ? userCoords.longitude : 101.6932;
     const initialLat = userCoords ? userCoords.latitude : 3.1408;
 
-    const map = new maplibregl.Map({
+    const mapInstance = new maplibregl.Map({
       container: mapContainerRef.current,
       style: theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day,
       center: [initialLng, initialLat],
@@ -71,82 +68,80 @@ export function MapView({
       attributionControl: false,
     });
 
-    map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
+    mapInstance.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
-    const clearLongPress = () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      touchStartPosRef.current = null;
+    let longPressTimer: number | null = null;
+    let startPoint: { x: number; y: number; lngLat: maplibregl.LngLat } | null = null;
+
+    const clearPress = () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = null;
+      startPoint = null;
     };
 
-    map.on('mousedown', (e) => {
-      clearLongPress();
-      touchStartPosRef.current = { x: e.point.x, y: e.point.y, lngLat: e.lngLat };
-      longPressTimerRef.current = window.setTimeout(() => {
-        if (onLongPressMap && touchStartPosRef.current) {
-          onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
+    mapInstance.on('mousedown', (e) => {
+      clearPress();
+      startPoint = { x: e.point.x, y: e.point.y, lngLat: e.lngLat };
+      longPressTimer = window.setTimeout(() => {
+        if (onLongPressMap && startPoint) {
+          onLongPressMap([startPoint.lngLat.lng, startPoint.lngLat.lat]);
         }
-        clearLongPress();
+        clearPress();
       }, 3000);
     });
 
-    map.on('touchstart', (e) => {
-      clearLongPress();
+    mapInstance.on('touchstart', (e) => {
+      clearPress();
       if (e.points && e.points[0]) {
-        touchStartPosRef.current = { x: e.points[0].x, y: e.points[0].y, lngLat: e.lngLat };
-        longPressTimerRef.current = window.setTimeout(() => {
-          if (onLongPressMap && touchStartPosRef.current) {
-            onLongPressMap([touchStartPosRef.current.lngLat.lng, touchStartPosRef.current.lngLat.lat]);
+        startPoint = { x: e.points[0].x, y: e.points[0].y, lngLat: e.lngLat };
+        longPressTimer = window.setTimeout(() => {
+          if (onLongPressMap && startPoint) {
+            onLongPressMap([startPoint.lngLat.lng, startPoint.lngLat.lat]);
           }
-          clearLongPress();
+          clearPress();
         }, 3000);
       }
     });
 
-    map.on('mousemove', (e) => {
-      if (touchStartPosRef.current) {
-        const dx = Math.abs(e.point.x - touchStartPosRef.current.x);
-        const dy = Math.abs(e.point.y - touchStartPosRef.current.y);
-        if (dx > 8 || dy > 8) clearLongPress();
+    mapInstance.on('mousemove', (e) => {
+      if (startPoint && (Math.abs(e.point.x - startPoint.x) > 8 || Math.abs(e.point.y - startPoint.y) > 8)) {
+        clearPress();
       }
     });
 
-    map.on('touchmove', (e) => {
-      if (touchStartPosRef.current && e.points && e.points[0]) {
-        const dx = Math.abs(e.points[0].x - touchStartPosRef.current.x);
-        const dy = Math.abs(e.points[0].y - touchStartPosRef.current.y);
-        if (dx > 8 || dy > 8) clearLongPress();
+    mapInstance.on('touchmove', (e) => {
+      if (startPoint && e.points && e.points[0]) {
+        if (Math.abs(e.points[0].x - startPoint.x) > 8 || Math.abs(e.points[0].y - startPoint.y) > 8) {
+          clearPress();
+        }
       }
     });
 
-    map.on('mouseup', clearLongPress);
-    map.on('touchend', clearLongPress);
-    map.on('dragstart', () => {
-      clearLongPress();
+    mapInstance.on('mouseup', clearPress);
+    mapInstance.on('touchend', clearPress);
+    mapInstance.on('dragstart', () => {
+      clearPress();
       if (onUserPan) onUserPan();
     });
 
-    mapRef.current = map;
+    setMap(mapInstance);
 
     return () => {
-      clearLongPress();
-      map.remove();
-      mapRef.current = null;
+      clearPress();
+      mapInstance.remove();
+      setMap(null);
     };
   }, []);
 
+  // Theme update
   useEffect(() => {
-    if (!mapRef.current) return;
-    const targetStyle = theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day;
-    mapRef.current.setStyle(targetStyle);
-  }, [theme]);
+    if (!map) return;
+    map.setStyle(theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day);
+  }, [map, theme]);
 
-  // Update user position marker and camera follow with 3-Way Perspective
+  // User Marker & Camera follow
   useEffect(() => {
-    if (!mapRef.current || !userCoords) return;
-
+    if (!map || !userCoords) return;
     const { latitude, longitude, heading } = userCoords;
 
     if (!userMarkerRef.current) {
@@ -162,7 +157,7 @@ export function MapView({
       `;
       userMarkerRef.current = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
         .setLngLat([longitude, latitude])
-        .addTo(mapRef.current);
+        .addTo(map);
     } else {
       userMarkerRef.current.setLngLat([longitude, latitude]);
     }
@@ -172,22 +167,10 @@ export function MapView({
       arrow.style.transform = `rotate(${heading}deg)`;
     }
 
-    if (followUser && mapRef.current) {
-      let targetPitch = 0;
-      let targetBearing = 0;
-
-      if (viewMode === '3d-heading') {
-        targetPitch = isNavigating ? 55 : 45;
-        targetBearing = heading !== null ? heading : mapRef.current.getBearing();
-      } else if (viewMode === '2d-north') {
-        targetPitch = 0;
-        targetBearing = 0; // Always North up
-      } else if (viewMode === '2d-heading') {
-        targetPitch = 0;
-        targetBearing = heading !== null ? heading : mapRef.current.getBearing();
-      }
-
-      mapRef.current.easeTo({
+    if (followUser) {
+      const targetPitch = viewMode === '3d-heading' ? (isNavigating ? 55 : 45) : 0;
+      const targetBearing = viewMode === '2d-north' ? 0 : heading !== null ? heading : map.getBearing();
+      map.easeTo({
         center: [longitude, latitude],
         zoom: isNavigating ? 17 : 15,
         pitch: targetPitch,
@@ -195,13 +178,11 @@ export function MapView({
         duration: 700,
       });
     }
-  }, [userCoords, followUser, isNavigating, viewMode]);
+  }, [map, userCoords, followUser, isNavigating, viewMode]);
 
-  // 📍 Google Maps Dropped Pin Marker
+  // Dropped Pin Marker
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
-
     if (!selectedPoint) {
       if (droppedPinMarkerRef.current) {
         droppedPinMarkerRef.current.remove();
@@ -225,239 +206,12 @@ export function MapView({
     } else {
       droppedPinMarkerRef.current.setLngLat([selectedPoint.lng, selectedPoint.lat]);
     }
-  }, [selectedPoint]);
+  }, [map, selectedPoint]);
 
-  // 🚦 Smooth Route-Aligned & Regional Live Traffic Layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const updateTraffic = () => {
-      const trafficGeoJSON = activeRoute
-        ? TrafficService.generateRouteTrafficGeoJSON(activeRoute, incidents)
-        : TrafficService.generateLiveTrafficGeoJSON(incidents);
-
-      const sourceId = 'mapeta-traffic-source';
-      const casingLayerId = 'mapeta-traffic-casing';
-      const flowLayerId = 'mapeta-traffic-flow';
-
-      const existingSource = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
-
-      if (existingSource) {
-        existingSource.setData(trafficGeoJSON);
-        if (map.getLayer(flowLayerId)) {
-          map.setLayoutProperty(flowLayerId, 'visibility', showTrafficLayer ? 'visible' : 'none');
-          map.setLayoutProperty(casingLayerId, 'visibility', showTrafficLayer ? 'visible' : 'none');
-        }
-      } else {
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: trafficGeoJSON,
-        });
-
-        map.addLayer({
-          id: casingLayerId,
-          type: 'line',
-          source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-            visibility: showTrafficLayer ? 'visible' : 'none',
-          },
-          paint: {
-            'line-color': '#0d0e11',
-            'line-width': 7,
-            'line-opacity': 0.8,
-          },
-        });
-
-        map.addLayer({
-          id: flowLayerId,
-          type: 'line',
-          source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-            visibility: showTrafficLayer ? 'visible' : 'none',
-          },
-          paint: {
-            'line-color': [
-              'match',
-              ['get', 'status'],
-              'standstill',
-              '#991b1b',
-              'heavy',
-              '#ef4444',
-              'moderate',
-              '#eab308',
-              '#22c55e',
-            ],
-            'line-width': 4.5,
-            'line-opacity': 0.95,
-          },
-        });
-      }
-    };
-
-    if (map.isStyleLoaded()) {
-      updateTraffic();
-    } else {
-      map.once('styledata', updateTraffic);
-    }
-  }, [activeRoute, incidents, showTrafficLayer]);
-
-  // Persistent Navigation Route Rendering
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const updateRoutes = () => {
-      const routesToRender = allRoutes.length > 0 ? allRoutes : activeRoute ? [activeRoute] : [];
-
-      const geojsonData: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-        type: 'FeatureCollection',
-        features: routesToRender.map((r, idx) => ({
-          type: 'Feature',
-          properties: {
-            routeIndex: idx,
-            isSelected: idx === selectedRouteIndex ? 1 : 0,
-          },
-          geometry: r.geometry,
-        })),
-      };
-
-      const sourceId = 'mapeta-routes-source';
-      const casingLayerId = 'mapeta-routes-casing';
-      const lineLayerId = 'mapeta-routes-line';
-
-      const existingSource = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
-
-      if (existingSource) {
-        existingSource.setData(geojsonData);
-      } else {
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: geojsonData,
-        });
-
-        map.addLayer({
-          id: casingLayerId,
-          type: 'line',
-          source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-            'line-sort-key': ['get', 'isSelected'],
-          },
-          paint: {
-            'line-color': ['case', ['==', ['get', 'isSelected'], 1], '#042f66', '#1b1c20'],
-            'line-width': ['case', ['==', ['get', 'isSelected'], 1], 9, 5],
-            'line-opacity': ['case', ['==', ['get', 'isSelected'], 1], 0.95, 0.55],
-          },
-        });
-
-        map.addLayer({
-          id: lineLayerId,
-          type: 'line',
-          source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-            'line-sort-key': ['get', 'isSelected'],
-          },
-          paint: {
-            'line-color': ['case', ['==', ['get', 'isSelected'], 1], '#a8c7fa', '#64748b'],
-            'line-width': ['case', ['==', ['get', 'isSelected'], 1], 6, 3.5],
-            'line-opacity': ['case', ['==', ['get', 'isSelected'], 1], 1, 0.75],
-          },
-        });
-
-        map.on('click', lineLayerId, (e) => {
-          if (e.features && e.features[0] && onSelectAlternative) {
-            const idx = Number(e.features[0].properties?.routeIndex);
-            if (!isNaN(idx)) {
-              onSelectAlternative(idx);
-            }
-          }
-        });
-
-        map.on('mouseenter', lineLayerId, () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-
-        map.on('mouseleave', lineLayerId, () => {
-          map.getCanvas().style.cursor = '';
-        });
-      }
-
-      if (!isNavigating && routesToRender.length > 0) {
-        const boundsKey = `${routesToRender[0]?.distance}_${routesToRender.length}`;
-        if (lastFitBoundsKeyRef.current !== boundsKey) {
-          lastFitBoundsKeyRef.current = boundsKey;
-          const allCoords = routesToRender.flatMap((r) => r.geometry.coordinates);
-          if (allCoords.length > 0) {
-            const bounds = allCoords.reduce(
-              (b, c) => b.extend(c as [number, number]),
-              new maplibregl.LngLatBounds(allCoords[0], allCoords[0])
-            );
-            map.fitBounds(bounds, { padding: { top: 90, bottom: 220, left: 40, right: 40 } });
-          }
-        }
-      } else if (routesToRender.length === 0) {
-        lastFitBoundsKeyRef.current = '';
-      }
-    };
-
-    if (map.isStyleLoaded()) {
-      updateRoutes();
-    } else {
-      map.once('styledata', updateRoutes);
-    }
-  }, [allRoutes, selectedRouteIndex, activeRoute, isNavigating, onSelectAlternative]);
-
-  // Incident Markers
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    incidentMarkersRef.current.forEach((marker) => marker.remove());
-    incidentMarkersRef.current.clear();
-
-    const iconColors: Record<string, { bg: string; text: string; emoji: string }> = {
-      police: { bg: 'bg-[#0b57d0]', text: 'text-white', emoji: '👮' },
-      hazard: { bg: 'bg-amber-500', text: 'text-white', emoji: '⚠️' },
-      jam: { bg: 'bg-red-500', text: 'text-white', emoji: '🚗' },
-      closure: { bg: 'bg-purple-600', text: 'text-white', emoji: '🚧' },
-      accident: { bg: 'bg-orange-600', text: 'text-white', emoji: '💥' },
-    };
-
-    incidents.forEach((inc) => {
-      const config = iconColors[inc.type] || iconColors.hazard;
-      const el = document.createElement('div');
-      el.className = 'cursor-pointer group flex flex-col items-center';
-      el.innerHTML = `
-        <div class="w-8 h-8 rounded-full ${config.bg} ${config.text} border-2 border-white shadow-xl flex items-center justify-center text-sm font-bold transform transition-transform group-hover:scale-125">
-          ${config.emoji}
-        </div>
-        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-[#1b1c20] text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/10 mt-1 shadow-lg pointer-events-none whitespace-nowrap">
-          ${inc.title}
-        </div>
-      `;
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (onIncidentClick) {
-          onIncidentClick(inc);
-        }
-      });
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([inc.lng, inc.lat])
-        .addTo(map);
-
-      incidentMarkersRef.current.set(inc.id, marker);
-    });
-  }, [incidents, onIncidentClick]);
+  // Attach Custom Map Hooks
+  useTrafficLayer(map, activeRoute, incidents, showTrafficLayer);
+  useRoutePolyline(map, allRoutes, selectedRouteIndex, activeRoute, isNavigating, onSelectAlternative);
+  useIncidentMarkers(map, incidents, onIncidentClick);
 
   return <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />;
 }

@@ -1,6 +1,88 @@
 import type { RouteInfo, RouteStep, ManeuverType, Incident } from '../types/navigation';
 import { calculateLLMTolls } from './tollEngine';
 
+interface TrafficImpact {
+  delaySec: number;
+  incidentCount: number;
+  status: 'smooth' | 'moderate' | 'heavy';
+}
+
+/**
+ * Parses raw OSRM legs into normalized navigation steps
+ */
+export function parseRouteSteps(legs: any[] = []): RouteStep[] {
+  const steps: RouteStep[] = [];
+  for (const leg of legs) {
+    if (!leg.steps) continue;
+    for (const step of leg.steps) {
+      const maneuver = step.maneuver || {};
+      const type = mapOSRMType(maneuver.type, maneuver.modifier);
+      const name = step.name || (step.ref ? `Lebuhraya ${step.ref}` : 'Unnamed Road');
+      const ref = step.ref || undefined;
+      const instruction = generateInstruction(type, name);
+
+      steps.push({
+        distance: step.distance || 0,
+        duration: step.duration || 0,
+        name,
+        ref,
+        instruction,
+        maneuverType: type,
+        modifier: maneuver.modifier,
+        location: maneuver.location || [0, 0],
+      });
+    }
+  }
+  return steps;
+}
+
+/**
+ * Calculates traffic delays and congestion status from nearby crowd incidents
+ */
+export function calculateRouteTrafficImpact(
+  coords: [number, number][],
+  incidents: Incident[] = []
+): TrafficImpact {
+  if (coords.length === 0 || incidents.length === 0) {
+    return { delaySec: 0, incidentCount: 0, status: 'smooth' };
+  }
+
+  let delaySec = 0;
+  let incidentCount = 0;
+  let hasHeavyJam = false;
+
+  for (const inc of incidents) {
+    const isNearRoute = coords.some(
+      (c) => Math.abs(c[0] - inc.lng) < 0.003 && Math.abs(c[1] - inc.lat) < 0.003
+    );
+
+    if (isNearRoute) {
+      incidentCount += 1;
+      if (inc.type === 'jam') {
+        delaySec += 360 + Math.min(inc.upvotes * 60, 600);
+        hasHeavyJam = true;
+      } else if (inc.type === 'accident' || inc.type === 'closure') {
+        delaySec += 300;
+        hasHeavyJam = true;
+      } else {
+        delaySec += 90;
+      }
+    }
+  }
+
+  const status = hasHeavyJam || delaySec > 300 ? 'heavy' : delaySec > 0 || incidentCount > 0 ? 'moderate' : 'smooth';
+  return { delaySec, incidentCount, status };
+}
+
+/**
+ * Checks if a route candidate is duplicate to existing parsed routes
+ */
+function isDuplicateRoute(existingRoutes: RouteInfo[], distance: number, duration: number): boolean {
+  return existingRoutes.some((r) => {
+    return Math.abs(r.distance - distance) < 800 && Math.abs(r.rawDuration - duration) < 90;
+  });
+}
+
 /**
  * Deduplicates raw OSRM routes, detects LLM tolls, and calculates traffic delay penalties from active incidents
  */
@@ -14,89 +96,18 @@ export function processMultiRoutes(
   rawRoutes.forEach((osrmRoute, index) => {
     const rawDistance = Math.round(osrmRoute.distance || 0);
     const rawDuration = Math.round(osrmRoute.duration || 0);
-    const coords = osrmRoute.geometry?.coordinates || [];
+    const coords: [number, number][] = osrmRoute.geometry?.coordinates || [];
 
-    if (coords.length === 0) return;
-
-    // Check if this route is substantially distinct (distance diff > 800m or time diff > 90s)
-    const isDuplicate = parsedRoutes.some((existing) => {
-      const distDiff = Math.abs(existing.distance - rawDistance);
-      const timeDiff = Math.abs(existing.rawDuration - rawDuration);
-      return distDiff < 800 && timeDiff < 90;
-    });
-
-    if (isDuplicate) return;
-
-    const steps: RouteStep[] = [];
-
-    if (osrmRoute.legs && osrmRoute.legs.length > 0) {
-      for (const leg of osrmRoute.legs) {
-        if (leg.steps) {
-          for (const step of leg.steps) {
-            const maneuver = step.maneuver || {};
-            const type = mapOSRMType(maneuver.type, maneuver.modifier);
-            const name = step.name || (step.ref ? `Lebuhraya ${step.ref}` : 'Unnamed Road');
-            const ref = step.ref || undefined;
-            const instruction = generateInstruction(type, maneuver.modifier, name);
-
-            steps.push({
-              distance: step.distance || 0,
-              duration: step.duration || 0,
-              name,
-              ref,
-              instruction,
-              maneuverType: type,
-              modifier: maneuver.modifier,
-              location: maneuver.location || [0, 0],
-            });
-          }
-        }
-      }
+    if (coords.length === 0 || isDuplicateRoute(parsedRoutes, rawDistance, rawDuration)) {
+      return;
     }
 
-    // Calculate LLM Toll Fares & Itemized Expressway Breakdown
-    const tollResult = profile === 'driving' ? calculateLLMTolls(steps) : {
-      hasTolls: false,
-      totalFare: 0,
-      formattedTotal: 'Free',
-      breakdown: [],
-    };
+    const steps = parseRouteSteps(osrmRoute.legs);
+    const tollResult = profile === 'driving'
+      ? calculateLLMTolls(steps)
+      : { hasTolls: false, totalFare: 0, formattedTotal: 'Free', breakdown: [] };
 
-    // Traffic congestion penalty calculation from active incidents
-    let trafficDelaySec = 0;
-    let incidentCount = 0;
-    let hasHeavyJam = false;
-
-    if (coords.length > 0 && incidents.length > 0) {
-      incidents.forEach((inc) => {
-        const isNearRoute = coords.some((c: [number, number]) => {
-          const dLng = Math.abs(c[0] - inc.lng);
-          const dLat = Math.abs(c[1] - inc.lat);
-          return dLng < 0.003 && dLat < 0.003;
-        });
-
-        if (isNearRoute) {
-          incidentCount += 1;
-          if (inc.type === 'jam') {
-            trafficDelaySec += 360 + Math.min(inc.upvotes * 60, 600); // 6 to 16 min delay
-            hasHeavyJam = true;
-          } else if (inc.type === 'accident' || inc.type === 'closure') {
-            trafficDelaySec += 300;
-            hasHeavyJam = true;
-          } else {
-            trafficDelaySec += 90;
-          }
-        }
-      });
-    }
-
-    let trafficStatus: 'smooth' | 'moderate' | 'heavy' = 'smooth';
-    if (hasHeavyJam || trafficDelaySec > 300) {
-      trafficStatus = 'heavy';
-    } else if (trafficDelaySec > 0 || incidentCount > 0) {
-      trafficStatus = 'moderate';
-    }
-
+    const traffic = calculateRouteTrafficImpact(coords, incidents);
     const summary = osrmRoute.legs?.[0]?.summary || `Via ${steps[1]?.name || 'Highway'}`;
     const label = tollResult.hasTolls ? 'Expressway (Toll)' : 'Federal / Trunk Road';
 
@@ -104,8 +115,8 @@ export function processMultiRoutes(
       id: `route-${index}-${Date.now()}`,
       distance: rawDistance,
       rawDuration,
-      trafficDelaySec,
-      duration: rawDuration + trafficDelaySec,
+      trafficDelaySec: traffic.delaySec,
+      duration: rawDuration + traffic.delaySec,
       geometry: osrmRoute.geometry,
       steps,
       summary,
@@ -115,67 +126,57 @@ export function processMultiRoutes(
       tollTotal: tollResult.totalFare,
       tollBreakdown: tollResult.breakdown,
       label,
-      trafficStatus,
-      incidentCount,
+      trafficStatus: traffic.status,
+      incidentCount: traffic.incidentCount,
     });
   });
 
-  // Sort initially by duration and return up to 4 diverse routes
   return parsedRoutes.sort((a, b) => a.duration - b.duration).slice(0, 4);
 }
 
+const MANEUVER_MAP: Record<string, ManeuverType> = {
+  'turn-left': 'turn-left',
+  'turn-right': 'turn-right',
+  'turn-slight left': 'turn-slight-left',
+  'turn-slight right': 'turn-slight-right',
+  'turn-sharp left': 'turn-sharp-left',
+  'turn-sharp right': 'turn-sharp-right',
+  'turn-uturn': 'u-turn',
+  'new name': 'straight',
+  continue: 'straight',
+  roundabout: 'roundabout',
+  rotary: 'roundabout',
+  merge: 'merge',
+  'on ramp': 'on-ramp',
+  'off ramp': 'off-ramp',
+  fork: 'fork',
+  arrive: 'arrive',
+  depart: 'depart',
+};
+
 function mapOSRMType(type: string, modifier?: string): ManeuverType {
-  switch (type) {
-    case 'turn':
-      if (modifier === 'left') return 'turn-left';
-      if (modifier === 'right') return 'turn-right';
-      if (modifier === 'slight left') return 'turn-slight-left';
-      if (modifier === 'slight right') return 'turn-slight-right';
-      if (modifier === 'sharp left') return 'turn-sharp-left';
-      if (modifier === 'sharp right') return 'turn-sharp-right';
-      if (modifier === 'uturn') return 'u-turn';
-      return 'straight';
-    case 'new name':
-    case 'continue':
-      return 'straight';
-    case 'roundabout':
-    case 'rotary':
-      return 'roundabout';
-    case 'merge':
-      return 'merge';
-    case 'on ramp':
-      return 'on-ramp';
-    case 'off ramp':
-      return 'off-ramp';
-    case 'fork':
-      return 'fork';
-    case 'arrive':
-      return 'arrive';
-    case 'depart':
-      return 'depart';
-    default:
-      return 'straight';
-  }
+  const key = modifier ? `${type}-${modifier}` : type;
+  return MANEUVER_MAP[key] || MANEUVER_MAP[type] || 'straight';
 }
 
-function generateInstruction(type: ManeuverType, _modifier?: string, roadName?: string): string {
+function generateInstruction(type: ManeuverType, roadName?: string): string {
   const road = roadName && roadName !== 'Unnamed Road' ? ` onto ${roadName}` : '';
-  switch (type) {
-    case 'turn-left': return `Turn left${road}`;
-    case 'turn-right': return `Turn right${road}`;
-    case 'turn-slight-left': return `Keep slight left${road}`;
-    case 'turn-slight-right': return `Keep slight right${road}`;
-    case 'turn-sharp-left': return `Sharp left${road}`;
-    case 'turn-sharp-right': return `Sharp right${road}`;
-    case 'roundabout': return `Enter roundabout and take exit${road}`;
-    case 'merge': return `Merge${road}`;
-    case 'on-ramp': return `Take ramp${road}`;
-    case 'off-ramp': return `Take exit${road}`;
-    case 'u-turn': return 'Make a U-turn';
-    case 'arrive': return 'Arrive at destination';
-    case 'depart':
-    case 'straight':
-    default:
-      return `Continue straight${road}`;
-  }
+  const instructions: Record<ManeuverType, string> = {
+    'turn-left': `Turn left${road}`,
+    'turn-right': `Turn right${road}`,
+    'turn-slight-left': `Keep slight left${road}`,
+    'turn-slight-right': `Keep slight right${road}`,
+    'turn-sharp-left': `Sharp left${road}`,
+    'turn-sharp-right': `Sharp right${road}`,
+    roundabout: `Enter roundabout and take exit${road}`,
+    merge: `Merge${road}`,
+    fork: `Keep in lane at fork${road}`,
+    'on-ramp': `Take ramp${road}`,
+    'off-ramp': `Take exit${road}`,
+    'u-turn': 'Make a U-turn',
+    arrive: 'Arrive at destination',
+    depart: `Start route${road}`,
+    straight: `Continue straight${road}`,
+  };
+  return instructions[type] || `Continue straight${road}`;
 }

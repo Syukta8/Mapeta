@@ -7,6 +7,25 @@ interface SearchBarProps {
   onBookmarkResult?: (lat: number, lng: number, name: string, address: string) => void;
 }
 
+const CATEGORY_ICONS: Array<{ pattern: RegExp; icon: typeof MapPin; color: string }> = [
+  { pattern: /petrol|shell|petronas|caltex|bhp/i, icon: Fuel, color: 'text-amber-400' },
+  { pattern: /mall|shopping|pavilion|mid valley|suria|klcc/i, icon: ShoppingBag, color: 'text-pink-400' },
+  { pattern: /hospital|klinik|medical|doctor/i, icon: Hospital, color: 'text-red-400' },
+  { pattern: /airport|klia|subang/i, icon: Plane, color: 'text-sky-400' },
+  { pattern: /lrt|mrt|station|ktm|transit/i, icon: Train, color: 'text-emerald-400' },
+  { pattern: /bank|menara|tower|plaza/i, icon: Landmark, color: 'text-indigo-400' },
+];
+
+function CategoryIcon({ category, name }: { category?: string; name?: string }) {
+  const text = `${category || ''} ${name || ''}`;
+  const match = CATEGORY_ICONS.find((item) => item.pattern.test(text));
+  if (match) {
+    const IconComp = match.icon;
+    return <IconComp className={`w-3.5 h-3.5 ${match.color}`} />;
+  }
+  return <MapPin className="w-3.5 h-3.5 text-[#a8c7fa]" />;
+}
+
 export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -38,7 +57,6 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
     };
   }, [query]);
 
-  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -56,29 +74,6 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
     setIsOpen(false);
     setQuery(result.name || result.display_name?.split(',')[0] || '');
     onSelectResult([lng, lat]);
-  };
-
-  const getCategoryIcon = (category?: string, name?: string) => {
-    const text = `${category || ''} ${name || ''}`.toLowerCase();
-    if (text.includes('petrol') || text.includes('shell') || text.includes('petronas') || text.includes('caltex')) {
-      return <Fuel className="w-3.5 h-3.5 text-amber-400" />;
-    }
-    if (text.includes('mall') || text.includes('shopping') || text.includes('pavilion') || text.includes('mid valley')) {
-      return <ShoppingBag className="w-3.5 h-3.5 text-pink-400" />;
-    }
-    if (text.includes('hospital') || text.includes('klinik') || text.includes('medical')) {
-      return <Hospital className="w-3.5 h-3.5 text-red-400" />;
-    }
-    if (text.includes('airport') || text.includes('klia') || text.includes('subang')) {
-      return <Plane className="w-3.5 h-3.5 text-sky-400" />;
-    }
-    if (text.includes('lrt') || text.includes('mrt') || text.includes('station') || text.includes('ktm')) {
-      return <Train className="w-3.5 h-3.5 text-emerald-400" />;
-    }
-    if (text.includes('bank') || text.includes('menara') || text.includes('tower')) {
-      return <Landmark className="w-3.5 h-3.5 text-indigo-400" />;
-    }
-    return <MapPin className="w-3.5 h-3.5 text-[#a8c7fa]" />;
   };
 
   return (
@@ -131,7 +126,7 @@ export function SearchBar({ onSelectResult, onBookmarkResult }: SearchBarProps) 
               >
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
                   <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0 mt-0.5 group-hover:border-[#a8c7fa]/40 transition-colors">
-                    {getCategoryIcon(result.category, title)}
+                    <CategoryIcon category={result.category} name={title} />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-bold text-white leading-tight truncate group-hover:text-[#a8c7fa] transition-colors">
