@@ -27,24 +27,38 @@ console.log('Mapeta launch\n');
 
 // 2. Start Backend Node Server
 console.log('[1/2] Starting Mapeta Backend Server (Express + SQLite + WebSockets)...');
-const serverProc = spawn('node', ['dist-server/index.js'], {
-  cwd: rootDir,
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
+let serverProc = null;
+const pids = {};
 
-serverProc.stdout.on('data', (d) => {
-  const msg = d.toString();
-  if (msg.includes('running on')) {
-    console.log('  -> Backend Server active on http://127.0.0.1:3000');
-  }
-});
+function startBackend() {
+  serverProc = spawn('node', ['dist-server/index.js'], {
+    cwd: rootDir,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-serverProc.stderr.on('data', (d) => {
-  // Suppress harmless logs
-});
+  pids.server = serverProc.pid;
+  try {
+    fs.writeFileSync(path.join(rootDir, '.mapeta.pid'), JSON.stringify(pids), 'utf-8');
+  } catch (e) {}
 
-// Save PIDs for stop-mapeta script
-const pids = { server: serverProc.pid };
+  serverProc.stdout.on('data', (d) => {
+    const msg = d.toString();
+    if (msg.includes('listening on')) {
+      console.log('  -> Backend Server active on http://127.0.0.1:3000');
+    }
+  });
+
+  serverProc.stderr.on('data', (d) => {
+    console.error('  [Server STDERR]:', d.toString().trim());
+  });
+
+  serverProc.on('exit', (code) => {
+    console.error(`[Server Exit] Backend exited with code ${code}. Auto-restarting in 1s...`);
+    setTimeout(startBackend, 1000);
+  });
+}
+
+startBackend();
 
 // 3. Start Cloudflare Tunnel
 console.log('[2/2] Generating secure remote HTTPS tunnel for 4G/5G phone access...\n');

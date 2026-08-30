@@ -42,6 +42,14 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-server.listen(PORT, () => {
+process.on('uncaughtException', (err) => {
+  console.error('[Mapeta UncaughtException]', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Mapeta UnhandledRejection]', reason);
+});
+
+server.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[Mapeta] Server listening on http://127.0.0.1:${PORT}`);
 });
