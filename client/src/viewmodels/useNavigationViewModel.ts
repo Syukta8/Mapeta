@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { RouteService } from '../models/RouteService';
 import { useNavigation } from '../hooks/useNavigation';
+import { formatManeuverDistance, formatNavigationDuration } from '../utils/formatters';
 import type { RouteInfo, Coordinates, TravelProfile } from '../models/NavigationModel';
 import type { Incident } from '../models/IncidentModel';
 
@@ -164,6 +165,24 @@ export function useNavigationViewModel(
     setSimulatedPos(null);
   }, []);
 
+  // Computed Presentation State (Clean Code Guy ViewModel Standard)
+  const computed = useMemo(() => {
+    const progressPercent = Math.max(
+      0,
+      Math.min(100, (1 - nav.distanceToNextStep / Math.max(100, nav.stepInitialDistance)) * 100)
+    );
+
+    return {
+      formattedDistanceToNextStep: formatManeuverDistance(nav.distanceToNextStep),
+      formattedRemainingDistance: formatManeuverDistance(nav.remainingDistance),
+      formattedRemainingDuration: formatNavigationDuration(nav.remainingDuration),
+      progressPercent,
+      hasRoutes: allRoutes.length > 0,
+      activeSummary: activeRoute?.summary || '',
+      activeTollTotal: activeRoute ? `RM ${activeRoute.tollTotal.toFixed(2)}` : 'Free',
+    };
+  }, [nav.distanceToNextStep, nav.stepInitialDistance, nav.remainingDistance, nav.remainingDuration, allRoutes, activeRoute]);
+
   return {
     allRoutes,
     activeRoute,
@@ -181,6 +200,7 @@ export function useNavigationViewModel(
     stepInitialDistance: nav.stepInitialDistance,
     remainingDistance: nav.remainingDistance,
     remainingDuration: nav.remainingDuration,
+    computed,
     calculateRoute,
     handleSelectDestination,
     selectProfile,

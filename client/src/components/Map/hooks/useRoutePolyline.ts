@@ -18,10 +18,10 @@ export function useRoutePolyline(
     const updateRoutes = () => {
       const routesToRender = allRoutes.length > 0 ? allRoutes : activeRoute ? [activeRoute] : [];
 
-      const geojsonData: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-        type: 'FeatureCollection',
+      const geojsonData = {
+        type: 'FeatureCollection' as const,
         features: routesToRender.map((r, idx) => ({
-          type: 'Feature',
+          type: 'Feature' as const,
           properties: {
             routeIndex: idx,
             isSelected: idx === selectedRouteIndex ? 1 : 0,
