@@ -34,7 +34,7 @@ export function MapView({
   incidents,
   isNavigating,
   followUser,
-  viewMode = '3d-heading',
+  viewMode = '2d-heading',
   showTrafficLayer = true,
   selectedPoint = null,
   onLongPressMap,
@@ -46,6 +46,12 @@ export function MapView({
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const droppedPinMarkerRef = useRef<maplibregl.Marker | null>(null);
+
+  const onUserPanRef = useRef(onUserPan);
+  onUserPanRef.current = onUserPan;
+
+  const onLongPressMapRef = useRef(onLongPressMap);
+  onLongPressMapRef.current = onLongPressMap;
 
   // Initialize Map
   useEffect(() => {
@@ -59,7 +65,7 @@ export function MapView({
       style: theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day,
       center: [initialLng, initialLat],
       zoom: 14,
-      pitch: isNavigating ? 55 : 0,
+      pitch: 0,
       bearing: userCoords?.heading || 0,
       dragPan: true,
       scrollZoom: true,
@@ -83,8 +89,8 @@ export function MapView({
       clearPress();
       startPoint = { x: e.point.x, y: e.point.y, lngLat: e.lngLat };
       longPressTimer = window.setTimeout(() => {
-        if (onLongPressMap && startPoint) {
-          onLongPressMap([startPoint.lngLat.lng, startPoint.lngLat.lat]);
+        if (onLongPressMapRef.current && startPoint) {
+          onLongPressMapRef.current([startPoint.lngLat.lng, startPoint.lngLat.lat]);
         }
         clearPress();
       }, 3000);
@@ -95,8 +101,8 @@ export function MapView({
       if (e.points && e.points[0]) {
         startPoint = { x: e.points[0].x, y: e.points[0].y, lngLat: e.lngLat };
         longPressTimer = window.setTimeout(() => {
-          if (onLongPressMap && startPoint) {
-            onLongPressMap([startPoint.lngLat.lng, startPoint.lngLat.lat]);
+          if (onLongPressMapRef.current && startPoint) {
+            onLongPressMapRef.current([startPoint.lngLat.lng, startPoint.lngLat.lat]);
           }
           clearPress();
         }, 3000);
@@ -113,15 +119,24 @@ export function MapView({
       if (startPoint && e.points && e.points[0]) {
         if (Math.abs(e.points[0].x - startPoint.x) > 8 || Math.abs(e.points[0].y - startPoint.y) > 8) {
           clearPress();
+          if (onUserPanRef.current) onUserPanRef.current();
         }
       }
     });
 
     mapInstance.on('mouseup', clearPress);
     mapInstance.on('touchend', clearPress);
+
     mapInstance.on('dragstart', () => {
       clearPress();
-      if (onUserPan) onUserPan();
+      if (onUserPanRef.current) onUserPanRef.current();
+    });
+
+    mapInstance.on('movestart', (e) => {
+      if (e.originalEvent) {
+        clearPress();
+        if (onUserPanRef.current) onUserPanRef.current();
+      }
     });
 
     setMap(mapInstance);
