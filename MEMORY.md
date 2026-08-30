@@ -34,4 +34,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Upgraded route search algorithm with multi-detour waypoints to guarantee multiple distinct routes (Expressway vs Federal trunk road vs Coastal).
 2026-08-28 — Overhauled UI to Google Pixel Experience (Material You / Android 15 tokens, rounded pills, Google Sans/Jakarta font) and added live in-navigation route switcher bottom sheet.
 2026-08-28 — Standing Rule: Do not deploy/restart the live server/tunnel until the user explicitly requests it. Dynamic multi-route algorithm verified 100% mathematical vector geometry with zero hardcoded paths.
-2026-08-29 — Updated incident reporting to a pure 2-tap driver safety flow (Tap 1: Category -> Tap 2: Subtype instant dispatch with 4-second auto-send countdown), completely eliminating text inputs and typing.
+2026-08-30 — Implemented Always-On Real-Time Live Traffic Layer (Green #22c55e / Yellow #eab308 / Red #ef4444 / Crimson #991b1b) across regional expressways & arterials with instant WebSocket push reactivity and 🚦 toggle button, visible both inside and outside navigation mode.

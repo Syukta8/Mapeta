@@ -1,4 +1,4 @@
-import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Navigation } from 'lucide-react';
+import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Navigation, Activity } from 'lucide-react';
 import { MapView } from '../components/Map/MapView';
 import { NavigationHUD } from '../components/Navigation/NavigationHUD';
 import { RouteSummary } from '../components/UI/RouteSummary';
@@ -19,7 +19,6 @@ export function MainNavigationView() {
 
   const mapVM = useMapViewModel();
 
-  // Navigation ViewModel will be initialized below after we calculate coordinates
   const simulatedPosRef = useNavigationViewModel(null, []);
 
   const userCoords: Coordinates | null = simulatedPosRef.simulatedPos
@@ -62,6 +61,17 @@ export function MainNavigationView() {
 
             <div className="flex sm:hidden items-center gap-1.5">
               <button
+                onClick={mapVM.toggleTrafficLayer}
+                className={`pixel-card p-2.5 rounded-full border shadow-xl transition-all ${
+                  mapVM.showTrafficLayer
+                    ? 'bg-[#6dd58c]/20 text-[#6dd58c] border-[#6dd58c]/40'
+                    : 'text-slate-400 border-white/10'
+                }`}
+                title="Toggle Live Traffic"
+              >
+                <Activity className="w-4 h-4" />
+              </button>
+              <button
                 onClick={mapVM.toggleTheme}
                 className="pixel-card p-2.5 rounded-full text-[#a8c7fa] border border-white/10 shadow-xl transition-colors"
               >
@@ -75,6 +85,20 @@ export function MainNavigationView() {
           </div>
 
           <div className="hidden sm:flex items-center gap-2 pointer-events-auto">
+            {/* Live Traffic Toggle Pill */}
+            <button
+              onClick={mapVM.toggleTrafficLayer}
+              className={`pixel-card flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold shadow-xl transition-all ${
+                mapVM.showTrafficLayer
+                  ? 'bg-[#6dd58c]/20 text-[#6dd58c] border-[#6dd58c]/40 shadow-[#6dd58c]/10'
+                  : 'text-slate-400 border-white/10 hover:text-white'
+              }`}
+              title="Toggle Live Traffic Flow (🟢 Smooth / 🟡 Moderate / 🔴 Heavy)"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>{mapVM.showTrafficLayer ? 'Live Traffic ON' : 'Traffic OFF'}</span>
+            </button>
+
             {incidentVM.incidents.length > 0 && (
               <div className="pixel-card flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-xl">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
@@ -97,9 +121,22 @@ export function MainNavigationView() {
         <button
           onClick={incidentVM.openReportModal}
           className="pixel-btn-primary p-3.5 rounded-full shadow-2xl active:scale-95 transition-all"
-          title="Report Hazard / Incident (Waze Style)"
+          title="Report Hazard / Incident (2 Taps)"
         >
           <Plus className="w-5 h-5 stroke-[2.5]" />
+        </button>
+
+        {/* Floating Live Traffic Layer Button */}
+        <button
+          onClick={mapVM.toggleTrafficLayer}
+          className={`pixel-card p-3 rounded-full shadow-2xl transition-all border ${
+            mapVM.showTrafficLayer
+              ? 'bg-[#6dd58c]/20 text-[#6dd58c] border-[#6dd58c]'
+              : 'text-white border-white/10 hover:text-[#6dd58c]'
+          }`}
+          title={mapVM.showTrafficLayer ? 'Live Traffic Flow Active' : 'Enable Live Traffic'}
+        >
+          <Activity className="w-4 h-4" />
         </button>
 
         {navVM.activeRoute && (
@@ -179,7 +216,7 @@ export function MainNavigationView() {
         />
       )}
 
-      {/* Waze 5-Second Auto-Send Incident Report Modal */}
+      {/* Waze 2-Tap Incident Report Modal */}
       {incidentVM.isReportModalOpen && (
         <ReportModal
           userCoords={userCoords}
@@ -208,6 +245,7 @@ export function MainNavigationView() {
           incidents={incidentVM.incidents}
           isNavigating={navVM.isNavigating}
           followUser={mapVM.followUser}
+          showTrafficLayer={mapVM.showTrafficLayer}
           onMapClick={navVM.handleSelectDestination}
           onUserPan={mapVM.handleUserPan}
           onSelectAlternative={navVM.selectRouteIndex}

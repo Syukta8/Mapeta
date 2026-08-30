@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { MAP_STYLES } from '../../styles/mapStyles';
 import type { Incident, RouteInfo } from '../../types/navigation';
+import { TrafficService } from '../../models/TrafficService';
 
 interface MapViewProps {
   theme: 'day' | 'night';
@@ -12,6 +13,7 @@ interface MapViewProps {
   incidents: Incident[];
   isNavigating: boolean;
   followUser: boolean;
+  showTrafficLayer?: boolean;
   onMapClick?: (coords: [number, number]) => void;
   onUserPan?: () => void;
   onIncidentClick?: (incident: Incident) => void;
@@ -27,6 +29,7 @@ export function MapView({
   incidents,
   isNavigating,
   followUser,
+  showTrafficLayer = true,
   onMapClick,
   onUserPan,
   onIncidentClick,
@@ -48,7 +51,7 @@ export function MapView({
       container: mapContainerRef.current,
       style: theme === 'night' ? MAP_STYLES.night : MAP_STYLES.day,
       center: [initialLng, initialLat],
-      zoom: 15,
+      zoom: 13.5,
       pitch: isNavigating ? 55 : 0,
       bearing: userCoords?.heading || 0,
       dragPan: true,
@@ -128,7 +131,85 @@ export function MapView({
     }
   }, [userCoords, followUser, isNavigating]);
 
-  // Zero-Flicker WebGL Persistent Route Rendering
+  // 🚦 Always-On Real-Time Live Traffic Layer (Green / Yellow / Red / Standstill)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const updateTraffic = () => {
+      const trafficGeoJSON = TrafficService.generateLiveTrafficGeoJSON(incidents);
+      const sourceId = 'mapeta-traffic-source';
+      const casingLayerId = 'mapeta-traffic-casing';
+      const flowLayerId = 'mapeta-traffic-flow';
+
+      const existingSource = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+
+      if (existingSource) {
+        existingSource.setData(trafficGeoJSON);
+        if (map.getLayer(flowLayerId)) {
+          map.setLayoutProperty(flowLayerId, 'visibility', showTrafficLayer ? 'visible' : 'none');
+          map.setLayoutProperty(casingLayerId, 'visibility', showTrafficLayer ? 'visible' : 'none');
+        }
+      } else {
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: trafficGeoJSON,
+        });
+
+        // Dark casing line
+        map.addLayer({
+          id: casingLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+            visibility: showTrafficLayer ? 'visible' : 'none',
+          },
+          paint: {
+            'line-color': '#0d0e11',
+            'line-width': 6,
+            'line-opacity': 0.7,
+          },
+        });
+
+        // Colored traffic flow line: Green (Smooth) / Yellow (Moderate) / Red (Heavy) / Crimson (Standstill)
+        map.addLayer({
+          id: flowLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+            visibility: showTrafficLayer ? 'visible' : 'none',
+          },
+          paint: {
+            'line-color': [
+              'match',
+              ['get', 'status'],
+              'standstill',
+              '#991b1b', // Dark Crimson (Standstill)
+              'heavy',
+              '#ef4444', // Red (Heavy Jam)
+              'moderate',
+              '#eab308', // Yellow (Moderate)
+              '#22c55e', // Green (Smooth flow)
+            ],
+            'line-width': 3.5,
+            'line-opacity': 0.85,
+          },
+        });
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      updateTraffic();
+    } else {
+      map.once('styledata', updateTraffic);
+    }
+  }, [incidents, showTrafficLayer]);
+
+  // Zero-Flicker WebGL Persistent Navigation Route Rendering
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -155,10 +236,8 @@ export function MapView({
       const existingSource = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
 
       if (existingSource) {
-        // Fast in-place WebGL buffer update (ZERO blinking)
         existingSource.setData(geojsonData);
       } else {
-        // Initialize persistent source and layers once
         map.addSource(sourceId, {
           type: 'geojson',
           data: geojsonData,
@@ -214,7 +293,6 @@ export function MapView({
         });
       }
 
-      // Fit bounds only when route destination changes, not on every alternative switch
       if (!isNavigating && routesToRender.length > 0) {
         const boundsKey = `${routesToRender[0]?.distance}_${routesToRender.length}`;
         if (lastFitBoundsKeyRef.current !== boundsKey) {

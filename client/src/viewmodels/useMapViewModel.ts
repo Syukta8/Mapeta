@@ -4,6 +4,7 @@ export function useMapViewModel() {
   const [theme, setTheme] = useState<'day' | 'night'>('night');
   const [followUser, setFollowUser] = useState<boolean>(true);
   const [is3DPerspective, setIs3DPerspective] = useState<boolean>(false);
+  const [showTrafficLayer, setShowTrafficLayer] = useState<boolean>(true);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'night' ? 'day' : 'night'));
@@ -11,6 +12,10 @@ export function useMapViewModel() {
 
   const toggle3DPerspective = useCallback(() => {
     setIs3DPerspective((prev) => !prev);
+  }, []);
+
+  const toggleTrafficLayer = useCallback(() => {
+    setShowTrafficLayer((prev) => !prev);
   }, []);
 
   const recenterCamera = useCallback(() => {
@@ -25,8 +30,10 @@ export function useMapViewModel() {
     theme,
     followUser,
     is3DPerspective,
+    showTrafficLayer,
     toggleTheme,
     toggle3DPerspective,
+    toggleTrafficLayer,
     recenterCamera,
     setFollowUser,
     handleUserPan,
