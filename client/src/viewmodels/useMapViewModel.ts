@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 export type MapViewMode = '3d-heading' | '2d-north' | '2d-heading';
 
 export function useMapViewModel() {
-  const [theme, setTheme] = useState<'day' | 'night'>('night');
+  const [theme, setTheme] = useState<'day' | 'night'>('day');
   const [followUser, setFollowUser] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<MapViewMode>('2d-heading');
   const [showTrafficLayer, setShowTrafficLayer] = useState<boolean>(true);
