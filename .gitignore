@@ -29,3 +29,7 @@ bin
 server/data/
 offline_maps/
 client/public/tiles/
+
+# Runtime Process IDs
+.mapeta.pid
+*.pid
