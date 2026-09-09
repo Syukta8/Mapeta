@@ -7,6 +7,14 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "   Mapeta — Cloudflare Pages Deployer   " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
+# 1. Verify wrangler presence
+if (-not (Test-Path "node_modules/wrangler/bin/wrangler.js")) {
+    Write-Host "[Deploy] Error: wrangler is not installed in node_modules." -ForegroundColor Red
+    Write-Host "[Deploy] Run 'npm install' to install pinned dependencies." -ForegroundColor Yellow
+    exit 1
+}
+
+# 2. Build frontend if needed or requested
 if ($ApiUrl) {
     Write-Host "[Deploy] Building frontend with VITE_API_URL=$ApiUrl" -ForegroundColor Yellow
     $env:VITE_API_URL = $ApiUrl
@@ -16,7 +24,13 @@ if ($ApiUrl) {
 
 npm run client:build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[Deploy] Client build failed! Aborting." -ForegroundColor Red
+    Write-Host "[Deploy] Client build failed! Aborting deploy." -ForegroundColor Red
+    exit 1
+}
+
+# 3. Verify dist directory
+if (-not (Test-Path "dist/index.html")) {
+    Write-Host "[Deploy] Error: dist/index.html was not found after build. Aborting deploy." -ForegroundColor Red
     exit 1
 }
 

@@ -3,6 +3,7 @@ import { Moon, Sun, AlertTriangle, Crosshair, Compass, Play, Square, Plus, Navig
 import { MapView } from '../components/Map/MapView';
 import { NavigationHUD } from '../components/Navigation/NavigationHUD';
 import { RouteSummary } from '../components/UI/RouteSummary';
+import { BackendSettings, SettingsButton } from '../components/UI/BackendSettings';
 import { SearchBar } from '../components/Search/SearchBar';
 import { FavoritesBar } from '../components/Search/FavoritesBar';
 import { SaveFavoriteModal } from '../components/Search/SaveFavoriteModal';
@@ -53,6 +54,9 @@ export function MainNavigationView() {
     name: string;
     address: string;
   } | null>(null);
+
+  // Backend Connection Settings Modal State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const favVM = useFavoritesViewModel((coords) => {
     setSelectedPlace(null);
@@ -234,6 +238,8 @@ export function MainNavigationView() {
         >
           <Crosshair className="w-4 h-4" />
         </button>
+
+        <SettingsButton onClick={() => setIsSettingsOpen(true)} />
       </div>
 
       {/* Waze Proximity Approach Banner Alert */}
@@ -313,6 +319,12 @@ export function MainNavigationView() {
           onVote={incidentVM.voteIncident}
         />
       )}
+
+      {/* Backend Connection Settings Modal */}
+      <BackendSettings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
 
       {/* Bottom-Right Map Database Last Update Pill Badge */}
       <div className="absolute bottom-3 right-3 z-10 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121316]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-slate-400 shadow-lg">
