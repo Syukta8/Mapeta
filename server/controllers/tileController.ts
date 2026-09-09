@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
 /**
  * Get tile server status
  */
-export const getStatus = (req: Request, res: Response) => {
+export const getStatus = (_req: Request, res: Response) => {
     try {
         const status = tileService.getOfflineStatus();
         res.json({ success: true, ...status });

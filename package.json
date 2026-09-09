@@ -16,7 +16,7 @@
     "tunnel": "bin\\cloudflared.exe tunnel --url http://127.0.0.1:3000",
     "build": "npm run client:build && npm run server:build",
     "test": "cross-env MAPETA_DB_PATH=:memory: tsx --test client/src/__tests__/*.test.ts server/__tests__/*.test.ts",
-    "typecheck": "tsc -b && tsc -p server/tsconfig.json --noEmit",
+    "typecheck": "tsc -b && tsc -p server/tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "deploy:pages": "npm run client:build && npx wrangler pages deploy dist --project-name mapeta",
     "build:apk": "node scripts/build-apk.js",
     "prepare": "husky"
