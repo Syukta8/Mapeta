@@ -1,8 +1,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-const dbPath = path.join(process.cwd(), 'mapeta.sqlite');
+const dbPath = process.env.MAPETA_DB_PATH || path.join(process.cwd(), 'mapeta.sqlite');
 export const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
 
 export function initDatabase() {
   db.exec(`

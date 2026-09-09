@@ -1,6 +1,6 @@
+import { setupTestDb } from './helpers/testDb.js';
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
-import { initDatabase, db } from '../db/database.js';
 import * as incidentService from '../services/incidentService.js';
 import * as favoriteService from '../services/favoriteService.js';
 import * as tileService from '../services/tileService.js';
@@ -8,7 +8,7 @@ import * as geocodeService from '../services/geocodeService.js';
 
 describe('Backend MVVM Layer Tests', () => {
   before(() => {
-    initDatabase();
+    setupTestDb();
   });
 
   it('reports, lists, votes and deactivates incidents via service layer', () => {
