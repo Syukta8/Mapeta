@@ -14,7 +14,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
   "include": ["client/src", "client/sw.ts", "vite.config.ts"],
   "exclude": ["client/src/__tests__"]

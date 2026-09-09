@@ -18,7 +18,7 @@ bin
 .vscode
 .idea
 .DS_Store
-
+*.apk
 
 # Offline Map Datasets & PMTiles (DO NOT COMMIT)
 *.pmtiles

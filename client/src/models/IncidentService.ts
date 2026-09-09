@@ -1,4 +1,5 @@
 import type { Incident, CreateIncidentPayload, VoteIncidentPayload } from './IncidentModel';
+import { getWebSocketUrl } from '../config';
 
 export type IncidentCallback = (incidents: Incident[]) => void;
 export type ConnectionCallback = (connected: boolean) => void;
@@ -16,8 +17,7 @@ export class IncidentService {
   public connect() {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = getWebSocketUrl();
 
     try {
       this.socket = new WebSocket(wsUrl);

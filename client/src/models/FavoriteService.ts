@@ -1,11 +1,12 @@
 import type { FavoritePlace, CreateFavoritePayload } from './FavoriteModel';
+import { API_BASE } from '../config';
 
 const LOCAL_STORAGE_KEY = 'mapeta_favorites_cache';
 
 export class FavoriteService {
   public static async getFavorites(): Promise<FavoritePlace[]> {
     try {
-      const res = await fetch('/api/favorites');
+      const res = await fetch(`${API_BASE}/api/favorites`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(json.data));
@@ -21,7 +22,7 @@ export class FavoriteService {
 
   public static async saveFavorite(payload: CreateFavoritePayload): Promise<FavoritePlace | null> {
     try {
-      const res = await fetch('/api/favorites', {
+      const res = await fetch(`${API_BASE}/api/favorites`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -38,7 +39,7 @@ export class FavoriteService {
 
   public static async deleteFavorite(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/favorites/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/api/favorites/${id}`, { method: 'DELETE' });
       const json = await res.json();
       return json.success === true;
     } catch (e) {

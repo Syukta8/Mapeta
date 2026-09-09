@@ -14,10 +14,13 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Permissive Open Source Stack (MIT, BSD-3, Apache-2.0, ODbL) — Strict corporate property compliance, no proprietary lock-in.
 2026-08-28 — Cloudflare Quick Tunnel for Mobile Access — Bypasses corporate network firewalls without needing VPN client setup on phones.
 2026-08-28 — Mandatory Pre-Commit Build Gate — Every stage must pass npm run build and tsc --noEmit before git commit.
+2026-09-09 — Backend 4-Layer MVVM Decomposition — Models (better-sqlite3 queries), Services (domain logic, cache, OSRM detour geometry), Controllers (HTTP adapters), Routes (pure declarations).
+2026-09-09 — Android Auto Dropped — Feasibility research confirmed Android Auto car display requires 100% native Kotlin + Car App Library + MapLibre Native SDK; impossible via WebView/Capacitor. Portable display uses built-in browser instead.
 
 ## Gotchas
 - On Windows, ensure native dependencies have prebuilt binaries or pure TS fallback.
 - Screen Wake-Lock and Geolocation APIs require secure context (HTTPS / localhost).
+- Capacitor 5 requires JDK 17 (Java 8 or 21 cause Gradle/AGP 8.0 compilation crashes).
 
 ## Log
 2026-08-28 — Initialized workspace foundation, SQLite DB, and WebSocket server (Commit a379e2b).
@@ -35,3 +38,4 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 2026-08-28 — Overhauled UI to Google Pixel Experience (Material You / Android 15 tokens, rounded pills, Google Sans/Jakarta font) and added live in-navigation route switcher bottom sheet.
 2026-08-28 — Standing Rule: Do not deploy/restart the live server/tunnel until the user explicitly requests it. Dynamic multi-route algorithm verified 100% mathematical vector geometry with zero hardcoded paths.
 2026-08-30 — Repowise Health Audit: Verified 0.0 performance risks / 10.0 perf score across all 52 files. Decomposed lowest-scoring hotspots (routeUtils.ts complexity cut from 34➔13, SearchBar.tsx score boosted from 4.7➔7.5, and MapView.tsx modularized into custom map hooks).
+2026-09-09 — Mapeta v2 Milestone: Decomposed backend into clean 4-layer MVVM architecture (models, services, controllers, routes). Added Cloudflare Pages split-deployment capability with dynamic API_BASE / WebSocket URL derivation. Initialized Capacitor 5 Android platform with navigation permissions, automated toolchain script (setup-android.ps1), and build:apk pipeline. 13 unit tests passing.

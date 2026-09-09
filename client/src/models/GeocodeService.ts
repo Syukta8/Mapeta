@@ -1,3 +1,5 @@
+import { API_BASE } from '../config';
+
 export interface SearchResult {
   id?: string;
   name?: string;
@@ -22,7 +24,7 @@ export class GeocodeService {
 
     try {
       const timeoutId = setTimeout(() => this.abortController?.abort(), 5000);
-      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`, {
+      const res = await fetch(`${API_BASE}/api/geocode/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`, {
         signal: this.abortController.signal,
       });
       clearTimeout(timeoutId);
@@ -44,7 +46,7 @@ export class GeocodeService {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
-      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, { signal: controller.signal });
+      const res = await fetch(`${API_BASE}/api/geocode/reverse?lat=${lat}&lng=${lng}`, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       const json = await res.json();

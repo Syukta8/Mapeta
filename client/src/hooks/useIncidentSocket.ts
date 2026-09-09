@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Incident } from '../types/navigation';
+import { API_BASE, getWebSocketUrl } from '../config';
 
 export function useIncidentSocket(onNewIncident?: (incident: Incident) => void) {
   const [isConnected, setIsConnected] = useState(false);
@@ -10,7 +11,7 @@ export function useIncidentSocket(onNewIncident?: (incident: Incident) => void) 
   // Initial load via REST
   const fetchIncidents = useCallback(async () => {
     try {
-      const res = await fetch('/api/incidents');
+      const res = await fetch(`${API_BASE}/api/incidents`);
       const data = await res.json();
       if (data.success) {
         setLiveIncidents(data.data);
@@ -24,9 +25,7 @@ export function useIncidentSocket(onNewIncident?: (incident: Incident) => void) 
     fetchIncidents();
 
     const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
+      const wsUrl = getWebSocketUrl();
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -92,7 +91,7 @@ export function useIncidentSocket(onNewIncident?: (incident: Incident) => void) 
   // Report new incident via REST (server broadcasts via WS)
   const reportIncident = async (incident: Partial<Incident>) => {
     try {
-      const res = await fetch('/api/incidents', {
+      const res = await fetch(`${API_BASE}/api/incidents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(incident),
@@ -107,7 +106,7 @@ export function useIncidentSocket(onNewIncident?: (incident: Incident) => void) 
   // Vote on incident
   const voteIncident = async (id: string, vote: 'up' | 'down') => {
     try {
-      const res = await fetch(`/api/incidents/${id}/vote`, {
+      const res = await fetch(`${API_BASE}/api/incidents/${id}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vote }),
