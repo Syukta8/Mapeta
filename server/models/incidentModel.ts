@@ -59,3 +59,14 @@ export function updateVotesAndStatus(id: string, upvotes: number, downvotes: num
   const stmt = db.prepare('UPDATE incidents SET upvotes = ?, downvotes = ?, active = ? WHERE id = ?');
   stmt.run(upvotes, downvotes, active, id);
 }
+
+/**
+ * Purges expired incidents from the database.
+ * @param nowMs The cutoff timestamp in milliseconds.
+ * @returns The number of rows deleted.
+ */
+export function deleteExpired(nowMs: number): number {
+  const stmt = db.prepare('DELETE FROM incidents WHERE active = 1 AND expires_at < ?');
+  const info = stmt.run(nowMs);
+  return info.changes;
+}

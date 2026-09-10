@@ -85,3 +85,11 @@ export function voteIncident(id: string, vote: 'up' | 'down'): Incident {
 
   return updated;
 }
+
+/**
+ * Purges expired incidents from the database.
+ * @returns The number of purged incident records.
+ */
+export function purgeExpiredIncidents(): number {
+  return incidentModel.deleteExpired(Date.now());
+}

@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { initDatabase } from './db/database.js';
 import { initWebSocketServer } from './ws/incidentSocket.js';
+import { purgeExpiredIncidents } from './services/incidentService.js';
 import { apiRouter } from './routes/index.js';
 
 const app = express();
@@ -48,6 +49,19 @@ app.use(express.json());
 
 // Initialize SQLite DB
 initDatabase();
+
+// Scheduled maintenance: purge expired incidents every 5 minutes to prevent DB bloat
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+setInterval(() => {
+  try {
+    const purged = purgeExpiredIncidents();
+    if (purged > 0) {
+      console.log(`[Maintenance] Purged ${purged} expired incident(s)`);
+    }
+  } catch (err) {
+    console.error('[Maintenance] Error purging expired incidents:', err);
+  }
+}, CLEANUP_INTERVAL_MS).unref();
 
 // Initialize WebSocket Hub
 initWebSocketServer(server);

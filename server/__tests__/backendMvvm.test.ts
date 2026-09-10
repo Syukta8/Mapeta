@@ -50,6 +50,20 @@ describe('Backend MVVM Layer Tests', () => {
     assert.strictEqual(updatedActiveList.some(i => i.id === reported.id), false);
   });
 
+  it('purges expired incidents via purgeExpiredIncidents', () => {
+    // Report an incident with negative duration (already expired)
+    incidentService.reportIncident({
+      type: 'hazard',
+      lat: 3.15,
+      lng: 101.69,
+      title: 'Pothole',
+      durationHours: -1,
+    });
+
+    const purgedCount = incidentService.purgeExpiredIncidents();
+    assert.ok(purgedCount >= 1, 'Should have purged at least 1 expired incident');
+  });
+
   it('saves, deduplicates home/work, and removes favorites via service layer', () => {
     // 1. Save Home 1
     const home1 = favoriteService.saveFavorite({
