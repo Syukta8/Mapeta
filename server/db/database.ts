@@ -3,7 +3,24 @@ import path from 'path';
 
 const dbPath = process.env.MAPETA_DB_PATH || path.join(process.cwd(), 'mapeta.sqlite');
 export const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+if (dbPath !== ':memory:') {
+  db.pragma('journal_mode = WAL');
+}
+
+const stmtCache = new Map<string, Database.Statement>();
+
+/**
+ * Retrieves or creates a cached prepared statement to avoid repetitive compilation
+ * and prevent temporary statement GC destructor issues in Node 24.
+ */
+export function getStatement(sql: string): Database.Statement {
+  let stmt = stmtCache.get(sql);
+  if (!stmt) {
+    stmt = db.prepare(sql);
+    stmtCache.set(sql, stmt);
+  }
+  return stmt;
+}
 
 export function initDatabase() {
   db.exec(`

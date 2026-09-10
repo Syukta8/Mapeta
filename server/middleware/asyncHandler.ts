@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Wraps an asynchronous Express request handler and forwards any thrown errors or
@@ -9,8 +9,8 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
  */
 export function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
-): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+): (req: Request, res: Response, next: NextFunction) => Promise<unknown> {
+  return (req: Request, res: Response, next: NextFunction): Promise<unknown> => {
+    return Promise.resolve(fn(req, res, next)).catch(next);
   };
 }

@@ -1,4 +1,4 @@
-import { db } from '../db/database.js';
+﻿import { getStatement } from '../db/database.js';
 import { Favorite, GeocodeResult } from './types.js';
 
 /**
@@ -6,7 +6,7 @@ import { Favorite, GeocodeResult } from './types.js';
  * @returns Array of all favorites.
  */
 export function findAll(): Favorite[] {
-  const stmt = db.prepare('SELECT * FROM favorites ORDER BY created_at DESC');
+  const stmt = getStatement('SELECT * FROM favorites ORDER BY created_at DESC');
   return stmt.all() as Favorite[];
 }
 
@@ -16,7 +16,7 @@ export function findAll(): Favorite[] {
  * @returns The favorite if found, otherwise undefined.
  */
 export function findById(id: string): Favorite | undefined {
-  const stmt = db.prepare('SELECT * FROM favorites WHERE id = ?');
+  const stmt = getStatement('SELECT * FROM favorites WHERE id = ?');
   return stmt.get(id) as Favorite | undefined;
 }
 
@@ -27,7 +27,7 @@ export function findById(id: string): Favorite | undefined {
  * @returns Array of geocode results matching the query.
  */
 export function search(query: string, limit: number): GeocodeResult[] {
-  const stmt = db.prepare(`
+  const stmt = getStatement(`
     SELECT id, name, type as category, lat, lng, address as display_name 
     FROM favorites 
     WHERE name LIKE ? OR address LIKE ? 
@@ -42,7 +42,7 @@ export function search(query: string, limit: number): GeocodeResult[] {
  * @param type The type of favorites to delete.
  */
 export function deleteByType(type: string): void {
-  const stmt = db.prepare('DELETE FROM favorites WHERE type = ?');
+  const stmt = getStatement('DELETE FROM favorites WHERE type = ?');
   stmt.run(type);
 }
 
@@ -51,7 +51,7 @@ export function deleteByType(type: string): void {
  * @param fav The favorite to create.
  */
 export function create(fav: Favorite): void {
-  const stmt = db.prepare(`
+  const stmt = getStatement(`
     INSERT INTO favorites (id, name, type, lat, lng, address, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
@@ -71,6 +71,6 @@ export function create(fav: Favorite): void {
  * @param id The ID of the favorite to delete.
  */
 export function deleteById(id: string): void {
-  const stmt = db.prepare('DELETE FROM favorites WHERE id = ?');
+  const stmt = getStatement('DELETE FROM favorites WHERE id = ?');
   stmt.run(id);
 }

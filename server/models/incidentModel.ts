@@ -1,4 +1,4 @@
-import { db } from '../db/database.js';
+﻿import { getStatement } from '../db/database.js';
 import { Incident } from './types.js';
 
 /**
@@ -7,7 +7,7 @@ import { Incident } from './types.js';
  * @returns Array of active incidents.
  */
 export function findActive(now: number): Incident[] {
-  const stmt = db.prepare('SELECT * FROM incidents WHERE active = 1 AND expires_at > ? ORDER BY reported_at DESC');
+  const stmt = getStatement('SELECT * FROM incidents WHERE active = 1 AND expires_at > ? ORDER BY reported_at DESC');
   return stmt.all(now) as Incident[];
 }
 
@@ -17,7 +17,7 @@ export function findActive(now: number): Incident[] {
  * @returns The incident if found, otherwise undefined.
  */
 export function findById(id: string): Incident | undefined {
-  const stmt = db.prepare('SELECT * FROM incidents WHERE id = ?');
+  const stmt = getStatement('SELECT * FROM incidents WHERE id = ?');
   return stmt.get(id) as Incident | undefined;
 }
 
@@ -26,7 +26,7 @@ export function findById(id: string): Incident | undefined {
  * @param incident The incident to create.
  */
 export function create(incident: Incident): void {
-  const stmt = db.prepare(`
+  const stmt = getStatement(`
     INSERT INTO incidents (
       id, type, lat, lng, title, description, reported_at, expires_at, upvotes, downvotes, active
     ) VALUES (
@@ -56,7 +56,7 @@ export function create(incident: Incident): void {
  * @param active The new active status (1 or 0).
  */
 export function updateVotesAndStatus(id: string, upvotes: number, downvotes: number, active: number): void {
-  const stmt = db.prepare('UPDATE incidents SET upvotes = ?, downvotes = ?, active = ? WHERE id = ?');
+  const stmt = getStatement('UPDATE incidents SET upvotes = ?, downvotes = ?, active = ? WHERE id = ?');
   stmt.run(upvotes, downvotes, active, id);
 }
 
@@ -66,7 +66,7 @@ export function updateVotesAndStatus(id: string, upvotes: number, downvotes: num
  * @returns The number of rows deleted.
  */
 export function deleteExpired(nowMs: number): number {
-  const stmt = db.prepare('DELETE FROM incidents WHERE active = 1 AND expires_at < ?');
+  const stmt = getStatement('DELETE FROM incidents WHERE active = 1 AND expires_at < ?');
   const info = stmt.run(nowMs);
   return info.changes;
 }

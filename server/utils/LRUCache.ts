@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Internal storage wrapper for cached values with TTL.
  */
 interface CacheEntry<V> {
@@ -65,7 +65,7 @@ export class LRUCache<K, V> {
       }
     }
 
-    const ttl = customTtlMs !== undefined ? Math.max(1, customTtlMs) : this.defaultTtlMs;
+    const ttl = customTtlMs !== undefined ? customTtlMs : this.defaultTtlMs;
     this.map.set(key, {
       value,
       expiresAt: Date.now() + ttl,
