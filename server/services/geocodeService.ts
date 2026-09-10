@@ -3,9 +3,10 @@
  */
 import * as favoriteModel from '../models/favoriteModel.js';
 import type { GeocodeResult, ReverseGeocodeResult } from '../models/types.js';
+import { LRUCache } from '../utils/LRUCache.js';
 
-const searchCache = new Map<string, { data: GeocodeResult[]; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+// Bounded LRU cache: 500 entries max, 5-minute TTL to prevent unbounded heap memory growth
+const searchCache = new LRUCache<string, GeocodeResult[]>(500, 300_000);
 
 /**
  * Searches for places combining local favorites and external APIs.
@@ -19,12 +20,10 @@ export async function searchPlaces(query: string, limit: number = 6): Promise<Ge
     return [];
   }
 
-  const now = Date.now();
   const cacheKey = trimmed.toLowerCase();
   const cached = searchCache.get(cacheKey);
-
-  if (cached && now - cached.timestamp < CACHE_TTL) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   const localFavorites = favoriteModel.search(trimmed, 3);
@@ -87,7 +86,7 @@ export async function searchPlaces(query: string, limit: number = 6): Promise<Ge
   }
 
   const combined = [...localFavorites, ...externalResults].slice(0, limit);
-  searchCache.set(cacheKey, { data: combined, timestamp: now });
+  searchCache.set(cacheKey, combined);
 
   return combined;
 }
