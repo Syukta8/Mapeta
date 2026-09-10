@@ -8,6 +8,7 @@ import { initDatabase } from './db/database.js';
 import { initWebSocketServer } from './ws/incidentSocket.js';
 import { purgeExpiredIncidents } from './services/incidentService.js';
 import { apiRouter } from './routes/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -68,6 +69,9 @@ initWebSocketServer(server);
 
 // API Routes (central aggregator)
 app.use('/api', apiRouter);
+
+// Centralized API Error Handling Middleware
+app.use(errorHandler);
 
 // Static Client Files
 const distPath = path.join(process.cwd(), 'dist');
