@@ -4,9 +4,12 @@
  */
 
 import { LRUCache } from '../utils/LRUCache.js';
+import { processMultiRoutes } from './routeProcessor.js';
+import { findActive } from '../models/incidentModel.js';
+import type { RouteInfo } from '../models/navigation.js';
 
 export interface RouteResult {
-  routes: any[];
+  routes: RouteInfo[];
 }
 
 // Bounded route LRU cache: 200 routes max, 5-minute TTL to reduce upstream fetch volume ~80%
@@ -45,9 +48,13 @@ export async function calculateRoutes(start: string, end: string, profile: strin
     const response = await fetch(url, { headers: { 'User-Agent': 'Mapeta-Local-Server/1.0' } });
     const data = await response.json() as any;
     if (data && data.routes && data.routes.length > 0) {
-      routeCache.set(cacheKey, data);
+      const activeIncidents = findActive(Date.now());
+      const parsedRoutes = processMultiRoutes(data.routes, mode, activeIncidents);
+      const result = { routes: parsedRoutes };
+      routeCache.set(cacheKey, result);
+      return result;
     }
-    return data;
+    return { routes: [] };
   }
 
   // Driving mode: corridor detour algorithm for 3-4 diverse routes
@@ -115,7 +122,10 @@ export async function calculateRoutes(start: string, end: string, profile: strin
     throw new Error('Could not calculate routes');
   }
 
-  const result: RouteResult = { routes: collectedRoutes };
+  const activeIncidents = findActive(Date.now());
+  const parsedRoutes = processMultiRoutes(collectedRoutes, mode as 'driving' | 'bike' | 'foot', activeIncidents);
+
+  const result: RouteResult = { routes: parsedRoutes };
   routeCache.set(cacheKey, result);
   return result;
 }

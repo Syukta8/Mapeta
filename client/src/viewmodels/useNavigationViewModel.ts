@@ -32,8 +32,7 @@ export function useNavigationViewModel(
         const routes = await RouteService.fetchRoutes(
           originCoords,
           destCoords,
-          profile,
-          incidents
+          profile
         );
 
         if (routes && routes.length > 0) {
@@ -58,8 +57,7 @@ export function useNavigationViewModel(
       const routes = await RouteService.fetchRoutes(
         [userCoords.longitude, userCoords.latitude],
         destination,
-        selectedProfile,
-        incidents
+        selectedProfile
       );
       if (routes && routes.length > 0) {
         setAllRoutes(routes);

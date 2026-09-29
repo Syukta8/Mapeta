@@ -4,6 +4,7 @@ import { MapView } from '../components/Map/MapView';
 import { NavigationHUD } from '../components/Navigation/NavigationHUD';
 import { RouteSummary } from '../components/UI/RouteSummary';
 import { BackendSettings, SettingsButton } from '../components/UI/BackendSettings';
+import { ConnectionStatus } from '../components/UI/ConnectionStatus';
 import { SearchBar } from '../components/Search/SearchBar';
 import { FavoritesBar } from '../components/Search/FavoritesBar';
 import { SaveFavoriteModal } from '../components/Search/SaveFavoriteModal';
@@ -94,7 +95,7 @@ export function MainNavigationView() {
 
   return (
     <div className={`w-full h-full flex flex-col relative overflow-hidden ${mapVM.theme === 'night' ? 'dark bg-[#121316] text-[#e3e2e6]' : 'bg-[#fdfcff] text-[#121316]'}`}>
-      
+      <ConnectionStatus />
       {/* Top Header Bar */}
       {!navVM.isNavigating && (
         <header className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none max-w-xl mx-auto">

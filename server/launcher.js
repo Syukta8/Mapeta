@@ -68,7 +68,10 @@ let tunnelProc = null;
 let tunnelUrl = 'Connecting...';
 
 if (fs.existsSync(cloudflaredPath)) {
-  tunnelProc = spawn(cloudflaredPath, ['tunnel', '--url', 'http://127.0.0.1:3000'], {
+  const isNamedTunnel = process.env.NAMED_TUNNEL;
+  const args = isNamedTunnel ? ['tunnel', 'run', isNamedTunnel] : ['tunnel', '--url', 'http://127.0.0.1:3000'];
+  
+  tunnelProc = spawn(cloudflaredPath, args, {
     cwd: rootDir,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -77,10 +80,17 @@ if (fs.existsSync(cloudflaredPath)) {
 
   const handleTunnelLog = (data) => {
     const text = data.toString();
-    const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-    if (match && tunnelUrl === 'Connecting...') {
-      tunnelUrl = match[0];
-      printDashboard();
+    if (isNamedTunnel) {
+      if (text.includes('Connection') && tunnelUrl === 'Connecting...') {
+        tunnelUrl = `https://api.mapeta.site (Named Tunnel: ${isNamedTunnel})`;
+        printDashboard();
+      }
+    } else {
+      const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+      if (match && tunnelUrl === 'Connecting...') {
+        tunnelUrl = match[0];
+        printDashboard();
+      }
     }
   };
 
