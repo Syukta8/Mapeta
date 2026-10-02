@@ -1,0 +1,2 @@
+/api/*  https://api.mapeta.site/api/:splat  200
+/ws     https://api.mapeta.site/ws          200

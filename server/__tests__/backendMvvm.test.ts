@@ -1,4 +1,4 @@
-﻿import './helpers/setupEnv.js';
+import './helpers/setupEnv.js';
 import { setupTestDb } from './helpers/testDb.js';
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
@@ -44,7 +44,7 @@ describe('Backend MVVM Layer Tests', () => {
   });
 
   it('reports, lists, votes and deactivates incidents via service layer', () => {
-    const reported = incidentService.reportIncident({
+    const { incident: reported } = incidentService.reportIncident({
       type: 'police',
       lat: 3.1412,
       lng: 101.6865,

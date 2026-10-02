@@ -1,0 +1,19 @@
+# Cloudflare Tunnel Configuration Template for Mapeta Backend
+# Usage:
+# 1. Login: cloudflared tunnel login
+# 2. Create tunnel: cloudflared tunnel create mapeta-backend
+# 3. Associate DNS: cloudflared tunnel route dns mapeta-backend api.yourdomain.com
+# 4. Run: cloudflared tunnel --config deploy/cloudflared.yml run mapeta-backend
+
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: C:\Users\PC\.cloudflared\<YOUR-TUNNEL-UUID>.json
+
+ingress:
+  # Mapeta Backend API and WebSocket
+  - hostname: api.yourdomain.com
+    service: http://127.0.0.1:3000
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+  # Catch-all rule
+  - service: http_status:404

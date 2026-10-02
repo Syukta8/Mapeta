@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, ArrowLeft, Clock } from 'lucide-react';
+import { X, ArrowLeft, Clock, MapPin, Navigation2 } from 'lucide-react';
 import { WAZE_INCIDENT_CATEGORIES, type CreateIncidentPayload, type WazeCategory } from '../../models/IncidentModel';
 
 interface ReportModalProps {
-  userCoords: { latitude: number; longitude: number } | null;
+  userCoords: { latitude: number; longitude: number; accuracy?: number } | null;
   onClose: () => void;
   onSubmit: (payload: CreateIncidentPayload) => Promise<void>;
 }
@@ -12,6 +12,11 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
   const [selectedCategory, setSelectedCategory] = useState<WazeCategory | null>(null);
   const [countdown, setCountdown] = useState<number>(4);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Resolved coordinates: use GPS when available, otherwise fall back to Malaysia default (KL Center)
+  const coords = userCoords
+    ? { lat: userCoords.latitude, lng: userCoords.longitude, accuracy: userCoords.accuracy, isGps: true }
+    : { lat: 3.1390, lng: 101.6869, accuracy: undefined, isGps: false };
 
   const autoDispatchTimerRef = useRef<number | null>(null);
 
@@ -41,18 +46,24 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
   };
 
   const handleDispatch = async (subtype: string) => {
-    if (!userCoords || !selectedCategory || isSubmitting) return;
+    if (!selectedCategory || isSubmitting) return;
 
     if (autoDispatchTimerRef.current) clearInterval(autoDispatchTimerRef.current);
     setIsSubmitting(true);
 
     try {
+      const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `idm_${Date.now()}_${Math.random()}`;
+
       await onSubmit({
         type: selectedCategory.type,
         subtype,
-        lat: userCoords.latitude,
-        lng: userCoords.longitude,
+        lat: coords.lat,
+        lng: coords.lng,
+        accuracy: coords.accuracy,
         title: `${selectedCategory.emoji} ${selectedCategory.label}: ${subtype}`,
+        idempotency_key: idempotencyKey,
       });
     } catch (err) {
       console.error('[ReportModal] Dispatch error:', err);
@@ -60,6 +71,7 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
@@ -98,6 +110,23 @@ export function ReportModal({ userCoords, onClose, onSubmit }: ReportModalProps)
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Location Status Pill */}
+        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[11px] text-slate-300">
+          <div className="flex items-center gap-1.5">
+            {coords.isGps ? (
+              <Navigation2 className="w-3.5 h-3.5 text-[#6dd58c]" />
+            ) : (
+              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            )}
+            <span>
+              {coords.isGps
+                ? `GPS Captured (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}${coords.accuracy ? ` ±${Math.round(coords.accuracy)}m` : ''})`
+                : 'Malaysia Fallback (KL Center)'}
+            </span>
+          </div>
+          <span className="text-[10px] text-[#a8c7fa] font-semibold">No Typing Needed</span>
         </div>
 
         {/* STEP 1: Tap Category (Large 5-tile Grid) */}

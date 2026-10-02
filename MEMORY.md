@@ -10,6 +10,7 @@ Mapeta is a self-hosted, enterprise-safe, open-source Google Maps & Waze alterna
 - **Location:** C:/Users/PC/Mapeta
 
 ## Decisions
+2026-10-02 — User confirms this always-on desktop is for backend services only, with local databases, metadata and mapping resources and a public Cloudflare frontend. Prioritize Malaysia incident/accident reporting before full navigation rework. Size the plan from this desktop and its current connection; measured hardware and provisional throughput are recorded in REWORK.md. Write permissions, user-data ownership and target load remain unresolved. Planning does not authorize deployment or service restarts.
 2026-08-28 — Hybrid Contraction Hierarchies (CH) + Dynamic Incident Rerouting — Chosen for <5ms query response times paired with real-time hazard avoidance.
 2026-08-28 — Permissive Open Source Stack (MIT, BSD-3, Apache-2.0, ODbL) — Strict corporate property compliance, no proprietary lock-in.
 2026-08-28 — Cloudflare Quick Tunnel for Mobile Access — Bypasses corporate network firewalls without needing VPN client setup on phones.

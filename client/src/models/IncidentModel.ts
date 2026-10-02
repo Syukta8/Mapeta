@@ -6,12 +6,15 @@ export interface Incident {
   subtype?: string;
   lat: number;
   lng: number;
+  accuracy?: number;
   title: string;
   description?: string;
+  idempotency_key?: string;
   reported_at: number;
   expires_at: number;
   upvotes: number;
   downvotes: number;
+  status?: 'active' | 'resolved' | 'expired';
   active: number;
 }
 
@@ -20,8 +23,10 @@ export interface CreateIncidentPayload {
   subtype?: string;
   lat: number;
   lng: number;
-  title: string;
+  accuracy?: number;
+  title?: string;
   description?: string;
+  idempotency_key?: string;
 }
 
 export interface VoteIncidentPayload {

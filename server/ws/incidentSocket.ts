@@ -1,8 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 
+import * as incidentModel from '../models/incidentModel.js';
+
 export interface WSMessage {
-  type: 'INCIDENT_NEW' | 'INCIDENT_UPDATE' | 'INCIDENT_DELETE' | 'PING' | 'PONG' | 'USER_TELEMETRY';
+  type: 'INCIDENT_SNAPSHOT' | 'INCIDENT_NEW' | 'INCIDENT_UPDATE' | 'INCIDENT_DELETE' | 'PING' | 'PONG' | 'USER_TELEMETRY' | 'CONNECTED';
   payload: any;
 }
 
@@ -19,9 +21,17 @@ export function initWebSocketServer(server: Server) {
     clients.add(ws);
     ws.send(JSON.stringify({ type: 'CONNECTED', payload: { timestamp: Date.now() } }));
 
+    // Send active incidents snapshot immediately upon connection
+    try {
+      const active = incidentModel.findActive(Date.now());
+      ws.send(JSON.stringify({ type: 'INCIDENT_SNAPSHOT', payload: active }));
+    } catch (e) {
+      console.error('[WebSocket] Failed to send initial snapshot:', e);
+    }
+
     ws.on('message', (messageRaw) => {
       try {
-        const msg: WSMessage = JSON.parse(messageRaw.toString());
+        const msg = JSON.parse(messageRaw.toString());
         if (msg.type === 'PING') {
           ws.send(JSON.stringify({ type: 'PONG', payload: { timestamp: Date.now() } }));
         } else if (msg.type === 'USER_TELEMETRY') {

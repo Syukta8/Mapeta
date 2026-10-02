@@ -4,15 +4,20 @@
 export interface Incident {
   id: string;
   type: 'police' | 'hazard' | 'jam' | 'closure' | 'accident';
+  subtype?: string;
   lat: number;
   lng: number;
+  accuracy?: number;
   title: string;
   description?: string;
+  idempotency_key?: string;
   reported_at: number;
   expires_at: number;
   upvotes: number;
   downvotes: number;
+  status?: 'active' | 'resolved' | 'expired';
   active: number;
+  reporter_id?: string | null;
 }
 
 /**

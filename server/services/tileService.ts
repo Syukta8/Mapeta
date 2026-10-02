@@ -27,12 +27,53 @@ export function getOfflineStatus(): { hasOfflineMap: boolean; filename?: string;
   };
 }
 
+export interface TileStreamResult {
+  statusCode: number;
+  headers: Record<string, string | number>;
+  stream: fs.ReadStream | null;
+}
+
 /**
- * Streams the offline map tiles file, supporting range requests.
+ * Returns metadata describing the locally hosted Malaysia basemap asset.
+ */
+export function getTileMetadata() {
+  const status = getOfflineStatus();
+  return {
+    coverage: 'Malaysia (Peninsular, Sabah, Sarawak)',
+    bounds: [99.5, 0.8, 119.5, 7.5],
+    format: 'pmtiles',
+    minZoom: 0,
+    maxZoom: 16,
+    attribution: '© OpenStreetMap contributors',
+    ...status,
+  };
+}
+
+/**
+ * Returns headers for a HEAD request against the offline map tile archive.
+ */
+export function headTiles(): { statusCode: number; headers: Record<string, string | number> } | null {
+  if (!fs.existsSync(MALAYSIA_PMTILES_PATH)) {
+    return null;
+  }
+  const stats = fs.statSync(MALAYSIA_PMTILES_PATH);
+  return {
+    statusCode: 200,
+    headers: {
+      'Accept-Ranges': 'bytes',
+      'Content-Length': stats.size,
+      'Content-Type': 'application/octet-stream',
+      'Cache-Control': 'public, max-age=86400, immutable',
+    },
+  };
+}
+
+/**
+ * Streams the offline map tiles file, supporting RFC-compliant HTTP Range requests (including suffix & open-ended ranges).
  * @param rangeHeader - The HTTP Range header if present.
  * @returns Object containing status code, headers, and the read stream, or null if file not found.
  */
-export function streamTiles(rangeHeader: string | undefined): { statusCode: number; headers: Record<string, string | number>; stream: fs.ReadStream } | null {
+export function streamTiles(rangeHeader: string | undefined): TileStreamResult | null {
   if (!fs.existsSync(MALAYSIA_PMTILES_PATH)) {
     return null;
   }
@@ -40,44 +81,70 @@ export function streamTiles(rangeHeader: string | undefined): { statusCode: numb
   const stats = fs.statSync(MALAYSIA_PMTILES_PATH);
   const fileSize = stats.size;
 
-  if (rangeHeader) {
-    const parts = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+    const rawRange = rangeHeader.replace('bytes=', '').trim();
+    const parts = rawRange.split('-');
 
-    if (start >= fileSize || end >= fileSize) {
-      const stream = fs.createReadStream(MALAYSIA_PMTILES_PATH);
+    let start = 0;
+    let end = fileSize - 1;
+
+    if (parts[0] === '' && parts[1]) {
+      // Suffix range: bytes=-N (last N bytes)
+      const suffixLength = parseInt(parts[1], 10);
+      if (isNaN(suffixLength) || suffixLength <= 0) {
+        return {
+          statusCode: 416,
+          headers: { 'Content-Range': `bytes */${fileSize}` },
+          stream: null,
+        };
+      }
+      start = Math.max(0, fileSize - suffixLength);
+      end = fileSize - 1;
+    } else {
+      start = parseInt(parts[0], 10);
+      end = parts[1] !== '' && parts[1] !== undefined ? parseInt(parts[1], 10) : fileSize - 1;
+    }
+
+    if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize || start > end) {
       return {
         statusCode: 416,
         headers: {
-          'Content-Range': `bytes */${fileSize}`
+          'Content-Range': `bytes */${fileSize}`,
+          'Accept-Ranges': 'bytes',
         },
-        stream
+        stream: null,
       };
     }
 
-    const chunksize = (end - start) + 1;
+    // Clamp end to file bounds
+    end = Math.min(end, fileSize - 1);
+    const chunksize = end - start + 1;
     const stream = fs.createReadStream(MALAYSIA_PMTILES_PATH, { start, end });
-    
+
     return {
       statusCode: 206,
       headers: {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
-        'Content-Type': 'application/octet-stream'
+        'Content-Type': 'application/octet-stream',
+        'Cache-Control': 'public, max-age=86400, immutable',
       },
-      stream
-    };
-  } else {
-    const stream = fs.createReadStream(MALAYSIA_PMTILES_PATH);
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Length': fileSize,
-        'Content-Type': 'application/octet-stream'
-      },
-      stream
+      stream,
     };
   }
+
+  // Full file stream
+  const stream = fs.createReadStream(MALAYSIA_PMTILES_PATH);
+  return {
+    statusCode: 200,
+    headers: {
+      'Accept-Ranges': 'bytes',
+      'Content-Length': fileSize,
+      'Content-Type': 'application/octet-stream',
+      'Cache-Control': 'public, max-age=86400, immutable',
+    },
+    stream,
+  };
 }
+

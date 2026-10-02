@@ -5,3 +5,4 @@ export const incidentRouter = Router();
 incidentRouter.get('/', incidentController.getAll);
 incidentRouter.post('/', incidentController.create);
 incidentRouter.post('/:id/vote', incidentController.vote);
+incidentRouter.post('/:id/resolve', incidentController.resolve);
