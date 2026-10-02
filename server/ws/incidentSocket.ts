@@ -5,7 +5,7 @@ import * as incidentModel from '../models/incidentModel.js';
 
 export interface WSMessage {
   type: 'INCIDENT_SNAPSHOT' | 'INCIDENT_NEW' | 'INCIDENT_UPDATE' | 'INCIDENT_DELETE' | 'PING' | 'PONG' | 'USER_TELEMETRY' | 'CONNECTED';
-  payload: any;
+  payload: unknown;
 }
 
 let wss: WebSocketServer | null = null;

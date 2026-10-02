@@ -81,7 +81,7 @@ export class IncidentService {
       this.socket.onerror = () => {
         this.notifyConnection(false);
       };
-    } catch (e) {
+    } catch {
       this.notifyConnection(false);
       this.scheduleReconnect();
     }

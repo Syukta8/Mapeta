@@ -85,8 +85,8 @@ export function streamTiles(rangeHeader: string | undefined): TileStreamResult |
     const rawRange = rangeHeader.replace('bytes=', '').trim();
     const parts = rawRange.split('-');
 
-    let start = 0;
-    let end = fileSize - 1;
+    let start: number;
+    let end: number;
 
     if (parts[0] === '' && parts[1]) {
       // Suffix range: bytes=-N (last N bytes)

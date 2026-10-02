@@ -8,9 +8,11 @@ export function ConnectionStatus() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/health`, { timeout: 3000 } as any);
+        const res = await fetch(`${API_BASE}/api/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
         setIsOnline(res.ok);
-      } catch (e) {
+      } catch {
         setIsOnline(false);
       }
     };

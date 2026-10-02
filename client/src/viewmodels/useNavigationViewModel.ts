@@ -7,7 +7,7 @@ import type { Incident } from '../models/IncidentModel';
 
 export function useNavigationViewModel(
   userCoords: Coordinates | null,
-  incidents: Incident[] = []
+  _incidents: Incident[] = []
 ) {
   const [allRoutes, setAllRoutes] = useState<RouteInfo[]>([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
@@ -47,7 +47,7 @@ export function useNavigationViewModel(
         return [];
       }
     },
-    [selectedProfile, incidents]
+    [selectedProfile]
   );
 
   const handleAutoReroute = useCallback(async () => {
@@ -68,7 +68,7 @@ export function useNavigationViewModel(
     } finally {
       setIsRerouting(false);
     }
-  }, [destination, userCoords, selectedProfile, incidents]);
+  }, [destination, userCoords, selectedProfile]);
 
   const nav = useNavigation(activeRoute, userCoords, isNavigating, handleAutoReroute);
 
